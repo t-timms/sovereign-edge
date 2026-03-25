@@ -8,16 +8,17 @@ PartOf=ai-stack.target
 [Service]
 Type=simple
 User=omnipotence
-WorkingDirectory=/ssd/sovereign-edge
-EnvironmentFile=-/ssd/sovereign-edge/secrets/.env.decrypted
+WorkingDirectory=/home/omnipotence/sovereign-edge
+Environment=SOPS_AGE_KEY_FILE=/home/omnipotence/.config/sops/age/keys.txt
+EnvironmentFile=-/home/omnipotence/sovereign-edge/secrets/.env.decrypted
 
-# Load secrets from SOPS-encrypted file at startup
-ExecStartPre=/usr/bin/sops --decrypt \
-    /home/omnipotence/sovereign-edge/secrets/env.yaml \
-    > /ssd/sovereign-edge/secrets/.env.decrypted
-ExecStartPrePermissions=0600
+# Decrypt secrets — must use bash so the > redirect works
+ExecStartPre=/bin/bash -c \
+    'sops --decrypt /home/omnipotence/sovereign-edge/secrets/env.yaml \
+     > /home/omnipotence/sovereign-edge/secrets/.env.decrypted \
+     && chmod 600 /home/omnipotence/sovereign-edge/secrets/.env.decrypted'
 
-ExecStart=/ssd/sovereign-edge/.venv/bin/python -m telegram_bot.bot
+ExecStart=/home/omnipotence/sovereign-edge/.venv/bin/python -m telegram_bot.bot
 ExecStop=/bin/kill -TERM $MAINPID
 
 Restart=on-failure
@@ -34,7 +35,7 @@ CPUQuota=80%
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ReadWritePaths=/ssd/sovereign-edge
+ReadWritePaths=/home/omnipotence/sovereign-edge
 
 [Install]
 WantedBy=ai-stack.target
