@@ -1,0 +1,15 @@
+[project]
+name = "sovereign-edge-llm"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "sovereign-edge-core",
+    "litellm==1.82.6",  # PINNED — 1.82.7/1.82.8 are compromised
+]
+
+[tool.uv.sources]
+sovereign-edge-core = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

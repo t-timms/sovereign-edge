@@ -1,0 +1,15 @@
+[project]
+name = "sovereign-edge-observability"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "sovereign-edge-core",
+    "structlog>=24.4,<26.0",
+]
+
+[tool.uv.sources]
+sovereign-edge-core = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
