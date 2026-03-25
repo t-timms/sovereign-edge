@@ -15,6 +15,9 @@ sovereign-edge-core = { workspace = true }
 sovereign-edge-llm = { workspace = true }
 sovereign-edge-observability = { workspace = true }
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/orchestrator"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

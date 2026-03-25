@@ -12,6 +12,9 @@ dependencies = [
 [tool.uv.sources]
 sovereign-edge-core = { workspace = true }
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/router"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

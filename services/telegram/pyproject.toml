@@ -18,6 +18,9 @@ sovereign-edge-memory = { workspace = true }
 sovereign-edge-observability = { workspace = true }
 sovereign-edge-router = { workspace = true }
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/telegram_bot"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

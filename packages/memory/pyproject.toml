@@ -18,6 +18,9 @@ episodic = ["mem0ai>=0.1.40,<0.2.0"]
 [tool.uv.sources]
 sovereign-edge-core = { workspace = true }
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/memory"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
