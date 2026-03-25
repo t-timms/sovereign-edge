@@ -20,7 +20,7 @@ def setup_logging(debug: bool = False) -> None:
             structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(
-            logging_level=10 if debug else 20  # DEBUG=10, INFO=20
+            10 if debug else 20  # DEBUG=10, INFO=20
         ),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
