@@ -25,6 +25,7 @@ class SquadName(StrEnum):
     CAREER = "career"
     INTELLIGENCE = "intelligence"
     CREATIVE = "creative"
+    GENERAL = "general"
     ORCHESTRATOR = "orchestrator"
 
 
@@ -48,12 +49,12 @@ class RoutingDecision(StrEnum):
 class TaskRequest(BaseModel):
     """A task submitted to any squad."""
 
-    id: UUID = Field(default_factory=uuid4)
-    text: str
+    task_id: UUID = Field(default_factory=uuid4)
+    content: str
     intent: Intent
     routing: RoutingDecision
     priority: TaskPriority = TaskPriority.NORMAL
-    squad: SquadName
+    squad: SquadName = SquadName.GENERAL
     context: dict[str, str] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     pii_detected: bool = False
@@ -66,6 +67,7 @@ class TaskResult(BaseModel):
     squad: SquadName
     content: str
     model_used: str
+    routing: RoutingDecision = RoutingDecision.CLOUD
     tokens_in: int = 0
     tokens_out: int = 0
     latency_ms: float = 0.0

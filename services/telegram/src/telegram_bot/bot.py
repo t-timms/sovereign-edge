@@ -164,7 +164,7 @@ class SovereignEdgeBot:
         request = TaskRequest(
             content=user_text,
             intent=intent,
-            priority=TaskPriority.P1,
+            priority=TaskPriority.HIGH,
             routing=routing,
         )
 
