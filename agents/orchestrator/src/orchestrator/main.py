@@ -56,6 +56,11 @@ class Orchestrator:
         """Sorted list of registered squad names (safe public accessor)."""
         return sorted(self._squads.keys())
 
+    @property
+    def running(self) -> bool:
+        """True while the orchestrator is active."""
+        return self._running
+
     # ------------------------------------------------------------------ #
     # Squad registry                                                       #
     # ------------------------------------------------------------------ #
@@ -369,7 +374,7 @@ async def run() -> None:
 
     await orchestrator.start()
 
-    while orchestrator._running:
+    while orchestrator.running:
         await asyncio.sleep(1)
 
 

@@ -7,13 +7,13 @@ Grounds every response with live Bible verse retrieval via bible-api.com
 
 from __future__ import annotations
 
-import logging
 import time
 
 from core.squad import BaseSquad
 from core.types import RoutingDecision, SquadName, TaskRequest, TaskResult
+from observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, component="spiritual")
 
 _SYSTEM_PROMPT = """\
 You are the Spiritual Intelligence of Sovereign Edge — a contemplative guide
@@ -127,6 +127,8 @@ class SpiritualSquad(BaseSquad):
                 },
             ],
             max_tokens=300,
+            routing=RoutingDecision.CLOUD,
+            squad=self.name,
         )
         return result["content"]
 

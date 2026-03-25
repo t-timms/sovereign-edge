@@ -224,7 +224,7 @@ class SovereignEdgeBot:
             stop_typing.set()
             typing_task.cancel()
             try:
-                await asyncio.wait_for(asyncio.shield(typing_task), timeout=1.0)
+                await asyncio.wait_for(typing_task, timeout=1.0)
             except (TimeoutError, asyncio.CancelledError):
                 pass
 
@@ -233,7 +233,10 @@ class SovereignEdgeBot:
             try:
                 await update.message.reply_text(chunk, parse_mode="Markdown")
             except Exception:
-                await update.message.reply_text(chunk)
+                try:
+                    await update.message.reply_text(chunk)
+                except Exception:
+                    logger.error("reply_text_failed", exc_info=True)
 
         logger.info(
             "message_handled",

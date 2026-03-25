@@ -12,18 +12,19 @@ WorkingDirectory=/home/omnipotence/sovereign-edge
 Environment=SOPS_AGE_KEY_FILE=/home/omnipotence/.config/sops/age/keys.txt
 EnvironmentFile=-/home/omnipotence/sovereign-edge/secrets/.env.decrypted
 
-# Decrypt secrets — must use bash so the > redirect works
-ExecStartPre=/bin/bash -c \
-    'sops --decrypt /home/omnipotence/sovereign-edge/secrets/env.yaml \
-     | sed "s/: /=/" \
-     > /home/omnipotence/sovereign-edge/secrets/.env.decrypted \
-     && chmod 600 /home/omnipotence/sovereign-edge/secrets/.env.decrypted'
+# Decrypt secrets — set -euo pipefail so sops failure aborts before sed writes
+ExecStartPre=/bin/bash -c 'set -euo pipefail; \
+    sops --decrypt /home/omnipotence/sovereign-edge/secrets/env.yaml \
+    | sed "s/: /=/" \
+    > /home/omnipotence/sovereign-edge/secrets/.env.decrypted \
+    && chmod 600 /home/omnipotence/sovereign-edge/secrets/.env.decrypted'
 
 ExecStart=/home/omnipotence/sovereign-edge/.venv/bin/python -m telegram_bot.bot
 ExecStop=/bin/kill -TERM $MAINPID
 
 Restart=on-failure
 RestartSec=10
+TimeoutStopSec=15
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=sovereign-edge-telegram

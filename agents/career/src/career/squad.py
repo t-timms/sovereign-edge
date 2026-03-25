@@ -7,13 +7,13 @@ salaries, and company intel are always current.
 
 from __future__ import annotations
 
-import logging
 import time
 
 from core.squad import BaseSquad
 from core.types import RoutingDecision, SquadName, TaskRequest, TaskResult
+from observability.logging import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__, component="career")
 
 _SYSTEM_PROMPT = """\
 You are the Career Intelligence of Sovereign Edge — a world-class career strategist
@@ -134,6 +134,8 @@ class CareerSquad(BaseSquad):
                 },
             ],
             max_tokens=250,
+            routing=RoutingDecision.CLOUD,
+            squad=self.name,
         )
         return result["content"]
 

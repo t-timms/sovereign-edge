@@ -52,7 +52,9 @@ class EpisodicMemory:
             self._available = True
             logger.info("Mem0 episodic memory initialized")
         except Exception as e:
-            logger.warning("Mem0 initialization failed, episodic memory disabled: %s", e)
+            logger.warning(
+                "Mem0 initialization failed, episodic memory disabled: %s", e, exc_info=True
+            )
             self._available = False
             self._memory = None
 
