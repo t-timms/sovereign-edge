@@ -89,7 +89,11 @@ class SovereignEdgeBot:
             logger.warning("telegram_token_missing — bot disabled")
             return
 
-        self._app = Application.builder().token(token).build()
+        from telegram.request import HTTPXRequest
+
+        # Short connect timeout so a hung TLS handshake never blocks reply delivery
+        _req = HTTPXRequest(connect_timeout=8.0, read_timeout=60.0, write_timeout=30.0)
+        self._app = Application.builder().token(token).request(_req).build()
 
         self._app.add_handler(CommandHandler("start", self._cmd_start))
         self._app.add_handler(CommandHandler("health", self._cmd_health))
@@ -218,7 +222,11 @@ class SovereignEdgeBot:
             reply = "⚠️ Something went wrong. Please try again."
         finally:
             stop_typing.set()
-            await asyncio.gather(typing_task, return_exceptions=True)
+            typing_task.cancel()
+            try:
+                await asyncio.wait_for(asyncio.shield(typing_task), timeout=1.0)
+            except (TimeoutError, asyncio.CancelledError):
+                pass
 
         # Telegram has a 4096-char limit per message
         for chunk in _split(reply, 4000):
