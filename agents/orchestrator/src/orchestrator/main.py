@@ -97,7 +97,9 @@ class Orchestrator:
                 logger.debug("conversation_history_inject_failed", exc_info=True)
 
         # ── 2. Semantic cache check ─────────────────────────────────────
-        if request.routing == RoutingDecision.CLOUD:
+        # Skip cache for INTELLIGENCE — research queries always want live data.
+        # Caching paper digests for 24h defeats the squad's entire purpose.
+        if request.routing == RoutingDecision.CLOUD and request.intent != Intent.INTELLIGENCE:
             try:
                 from memory.semantic_cache import get_cache
 
@@ -147,7 +149,7 @@ class Orchestrator:
         result = await squad.process(request)
 
         # ── 4. Store result in semantic cache ───────────────────────────
-        if request.routing == RoutingDecision.CLOUD and not result.cached:
+        if request.routing == RoutingDecision.CLOUD and not result.cached and request.intent != Intent.INTELLIGENCE:
             try:
                 from memory.semantic_cache import get_cache
 
