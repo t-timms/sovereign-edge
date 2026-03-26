@@ -12,7 +12,11 @@ uv.lock
 # Secrets (NEVER commit plaintext secrets)
 secrets/env.yaml
 secrets/*.key
+secrets/.env.decrypted
 *.pem
+
+# Private identity document
+SOUL.md
 
 # Data (too large for git)
 data/stepbible/
