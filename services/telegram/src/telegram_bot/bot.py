@@ -254,7 +254,7 @@ class SovereignEdgeBot:
                 pass
 
         # Telegram has a 4096-char limit per message
-        for chunk in _split(reply, 4000):
+        for chunk in _split(_sanitize_markdown(reply), 4000):
             try:
                 await update.message.reply_text(chunk, parse_mode="Markdown")
             except Exception:
@@ -280,6 +280,25 @@ async def _keep_typing(bot: Any, chat_id: int, stop: asyncio.Event) -> None:  # 
         except Exception:
             logger.debug("typing_action_failed", exc_info=True)
         await asyncio.sleep(4)
+
+
+def _sanitize_markdown(text: str) -> str:
+    """Coerce LLM output to the Telegram Markdown subset.
+
+    Telegram (MarkdownV1) only renders *bold*, _italic_, and [text](url).
+    Models default to standard Markdown (**bold**, ## headers, ---) which
+    renders as literal characters. Fix it here so prompt instructions alone
+    don't need to be perfect.
+    """
+    import re
+
+    # **bold** → *bold*  (non-greedy, single-line)
+    text = re.sub(r"\*\*(.+?)\*\*", r"*\1*", text)
+    # ## Any header level → plain text (strip leading #+ and space)
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+    # --- dividers → remove entirely
+    text = re.sub(r"^-{3,}\s*$", "", text, flags=re.MULTILINE)
+    return text
 
 
 def _split(text: str, size: int) -> list[str]:
