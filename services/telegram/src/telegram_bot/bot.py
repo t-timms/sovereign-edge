@@ -319,6 +319,17 @@ def _sanitize_markdown(text: str) -> str:
         text,
         flags=re.IGNORECASE,
     )
+    # Convert bare URLs to [url](url) — bare URLs don't embed as links in
+    # Telegram MarkdownV1. Skip URLs already inside []() link syntax.
+    text = re.sub(r"(?<!\[)(?<!\()(https?://[^\s\)\]]+)", r"[\1](\1)", text)
+    # Bold paper titles — lines with format "Title: description"
+    # where the title isn't already wrapped in * or _
+    text = re.sub(
+        r"^(?![*_\[•\-])([^:\n]{10,80}):([ \t])",
+        r"*\1*:\2",
+        text,
+        flags=re.MULTILINE,
+    )
     return text.strip()
 
 
