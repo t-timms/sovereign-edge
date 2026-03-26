@@ -31,8 +31,9 @@ FORBIDDEN — these render as literal characters in Telegram:
   ## headers — never use hash headers
   --- dividers — never use horizontal rules
 
-Structure: separate each section or paper with one blank line.
-Keep paragraphs to 2-3 sentences. Never write long unbroken blocks of text.
+Structure: one blank line between each paper entry. 2-3 sentences per entry max.
+Never add a "Key Takeaways", "Summary", or "Most Important" section — do not repeat
+papers you have already listed. No walls of text.
 
 ---
 
@@ -97,9 +98,9 @@ class IntelligenceSquad(BaseSquad):
 
             sections: list[str] = []
             if arxiv_papers:
-                sections.append(f"**arXiv (latest AI/ML):**\n{format_papers(arxiv_papers)}")
+                sections.append(f"arXiv (latest AI/ML):\n{format_papers(arxiv_papers)}")
             if hf_papers:
-                sections.append(f"**HuggingFace Daily Papers:**\n{format_hf_papers(hf_papers)}")
+                sections.append(f"HuggingFace Daily Papers:\n{format_hf_papers(hf_papers)}")
             research_context = "\n\n".join(sections)
 
         prior_turns: list[dict[str, str]] = []
@@ -165,9 +166,9 @@ class IntelligenceSquad(BaseSquad):
 
         sections: list[str] = []
         if arxiv_papers:
-            sections.append(f"**arXiv (latest AI/ML):**\n{format_papers(arxiv_papers)}")
+            sections.append(f"arXiv (latest AI/ML):\n{format_papers(arxiv_papers)}")
         if hf_papers:
-            sections.append(f"**HuggingFace Daily Papers:**\n{format_hf_papers(hf_papers)}")
+            sections.append(f"HuggingFace Daily Papers:\n{format_hf_papers(hf_papers)}")
 
         research_context = "\n\n".join(sections)
 
