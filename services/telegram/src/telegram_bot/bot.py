@@ -298,7 +298,14 @@ def _sanitize_markdown(text: str) -> str:
     text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
     # --- dividers → remove entirely
     text = re.sub(r"^-{3,}\s*$", "", text, flags=re.MULTILINE)
-    return text
+    # Strip trailing boilerplate summary sentences the model likes to append
+    text = re.sub(
+        r"\n*These (?:papers|results|findings|advancements|research).{0,300}$",
+        "",
+        text,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    return text.strip()
 
 
 def _split(text: str, size: int) -> list[str]:
