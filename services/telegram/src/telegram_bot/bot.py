@@ -233,7 +233,10 @@ class SovereignEdgeBot:
             context={"chat_id": chat_id},
         )
 
-        # Typing indicator refreshes every 4 s while the LLM processes
+        # Send typing immediately — guaranteed visible even on cache hits
+        await ctx.bot.send_chat_action(chat_id=tg_chat_id, action="typing")
+
+        # Background refresher keeps the indicator alive every 4 s for slow LLM calls
         stop_typing = asyncio.Event()
         typing_task = asyncio.create_task(_keep_typing(ctx.bot, tg_chat_id, stop_typing))
         try:
