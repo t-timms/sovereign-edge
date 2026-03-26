@@ -97,6 +97,45 @@ Bible API    Jina Search   arXiv +       Jina Search
 
 ---
 
+## Quick Start
+
+```bash
+git clone https://github.com/omnipotence-eth/sovereign-edge.git
+cd sovereign-edge
+
+# Install dependencies
+uv sync --all-packages
+
+# Pull local models
+ollama pull qwen3:0.6b
+ollama pull qwen3-embedding:0.6b
+
+# Configure environment
+cp .env.example .env        # fill in API keys and Telegram credentials
+
+# Personalize your instance (optional but recommended)
+cp SOUL.md.example SOUL.md  # define your mission, squads, and values
+
+# Run
+uv run python -m telegram_bot
+```
+
+See [Configuration](docs/configuration.md) for all `SE_` environment variables and [Deployment](docs/deployment.md) for the full Jetson + systemd setup.
+
+---
+
+## Personalization
+
+Sovereign Edge is designed to serve one person. Two files make it yours:
+
+**`.env`** — API keys, Telegram credentials, storage paths. Copy from `.env.example`.
+
+**`SOUL.md`** — Your identity document: who the system serves, what each squad is optimized for, and what values govern it. Copy from `SOUL.md.example`. This file is gitignored and never leaves your machine.
+
+The career squad system prompt in `agents/career/src/career/squad.py` is the other place to personalize — update it with your target roles, market, and differentiators.
+
+---
+
 ## Documentation
 
 - [Architecture](docs/architecture.md) — request flow, memory layers, LLM gateway
