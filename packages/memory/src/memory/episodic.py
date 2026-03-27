@@ -58,7 +58,7 @@ class EpisodicMemory:
             self._available = False
             self._memory = None
 
-    def add(self, text: str, user_id: str = "tremayne", metadata: dict | None = None) -> None:
+    def add(self, text: str, user_id: str = "default", metadata: dict | None = None) -> None:
         """Extract and store facts from a text."""
         if not self._available or not self._memory:
             return
@@ -67,7 +67,7 @@ class EpisodicMemory:
         except Exception as e:
             logger.error("Failed to add memory: %s", e, exc_info=True)
 
-    def search(self, query: str, user_id: str = "tremayne", limit: int = 5) -> list[dict]:
+    def search(self, query: str, user_id: str = "default", limit: int = 5) -> list[dict]:
         """Search episodic memories by semantic similarity."""
         if not self._available or not self._memory:
             return []
@@ -78,7 +78,7 @@ class EpisodicMemory:
             logger.error("Memory search failed: %s", e, exc_info=True)
             return []
 
-    def get_all(self, user_id: str = "tremayne") -> list[dict]:
+    def get_all(self, user_id: str = "default") -> list[dict]:
         """Retrieve all stored memories."""
         if not self._available or not self._memory:
             return []

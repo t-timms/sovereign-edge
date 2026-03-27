@@ -15,7 +15,7 @@ Sovereign Edge runs as a systemd service on a Jetson Nano (or any Linux ARM/x86 
 
 ---
 
-## First-Time Jetson Setup
+## First-Time Setup
 
 ### 1. Install system dependencies
 
@@ -48,8 +48,9 @@ ollama pull qwen3-embedding:0.6b
 ### 4. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/sovereign-edge.git /home/omnipotence/sovereign-edge
-cd /home/omnipotence/sovereign-edge
+# Replace YOUR_USER with your Linux username
+git clone https://github.com/YOUR_GITHUB_USERNAME/sovereign-edge.git ~/sovereign-edge
+cd ~/sovereign-edge
 ```
 
 ### 5. Install Python dependencies
@@ -58,10 +59,13 @@ cd /home/omnipotence/sovereign-edge
 uv sync --all-packages
 ```
 
-### 6. Create the data directory on the SSD
+### 6. Create the data directory
 
 ```bash
-mkdir -p /mnt/ssd/sovereign-edge-data/{lancedb,logs,models}
+mkdir -p ~/sovereign-edge/data/{lancedb,logs,models}
+# Or on a separate SSD:
+# mkdir -p /mnt/ssd/sovereign-edge-data/{lancedb,logs,models}
+# Then set SE_SSD_ROOT=/mnt/ssd/sovereign-edge-data in your secrets file
 ```
 
 ---
@@ -84,6 +88,7 @@ sudo install sops-v3.x.x.linux.arm64 /usr/local/bin/sops
 ### Generate an Age key pair
 
 ```bash
+mkdir -p ~/.config/sops/age
 age-keygen -o ~/.config/sops/age/keys.txt
 ```
 
@@ -103,10 +108,10 @@ SE_MISTRAL_API_KEY: ...
 SE_SSD_ROOT: /mnt/ssd/sovereign-edge-data
 ```
 
-Encrypt it with the Jetson's public key:
+Encrypt it with your public key:
 
 ```bash
-sops --encrypt --age age1... secrets/env.yaml > secrets/env.yaml.enc
+sops --encrypt --age age1YOUR_PUBLIC_KEY secrets/env.yaml > secrets/env.yaml.enc
 mv secrets/env.yaml.enc secrets/env.yaml
 ```
 
@@ -119,56 +124,38 @@ Create `.sops.yaml` at the project root to configure key discovery:
 ```yaml
 creation_rules:
   - path_regex: secrets/.*\.yaml$
-    age: age1...your_public_key...
+    age: age1YOUR_PUBLIC_KEY
 ```
 
 ---
 
 ## systemd Service
 
-The service file is at `systemd/telegram-bot.service`.
+The service file is at `systemd/telegram-bot.service`. It uses `<DEPLOY_USER>` and `<DEPLOY_ROOT>` placeholders that must be substituted with your values before installing.
 
-### Install the service
+### Configure and install the service
 
 ```bash
-sudo cp systemd/telegram-bot.service /etc/systemd/system/
+# Set your values
+DEPLOY_USER=$(whoami)
+DEPLOY_ROOT=$(realpath ~/sovereign-edge)
+
+# Substitute placeholders and install
+sed "s|<DEPLOY_USER>|${DEPLOY_USER}|g; s|<DEPLOY_ROOT>|${DEPLOY_ROOT}|g" \
+    systemd/telegram-bot.service \
+    | sudo tee /etc/systemd/system/telegram-bot.service
+
 sudo systemctl daemon-reload
 sudo systemctl enable telegram-bot
 ```
 
 ### Service configuration highlights
 
-```ini
-[Service]
-User=omnipotence
-WorkingDirectory=/home/omnipotence/sovereign-edge
-
-# Decrypt secrets before start — fails hard if SOPS errors
-ExecStartPre=/bin/bash -c 'set -euo pipefail; \
-    sops --decrypt /home/omnipotence/sovereign-edge/secrets/env.yaml \
-    | sed "s/: /=/" \
-    > /home/omnipotence/sovereign-edge/secrets/.env.decrypted \
-    && chmod 600 /home/omnipotence/sovereign-edge/secrets/.env.decrypted'
-
-ExecStart=uv run python -m telegram_bot
-EnvironmentFile=/home/omnipotence/sovereign-edge/secrets/.env.decrypted
-
-# Resource limits
-MemoryLimit=2G
-CPUQuota=80%
-
-# Hardening
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-
-# Fast restart
-TimeoutStopSec=15
-Restart=on-failure
-RestartSec=10
-```
-
-The `set -euo pipefail` in `ExecStartPre` is critical: if `sops` fails (wrong key, missing file, corrupted ciphertext), the shell exits non-zero and systemd aborts the start rather than launching the service with no secrets.
+The service:
+- Decrypts `secrets/env.yaml` via SOPS on every start — fails hard if SOPS errors, preventing the bot from starting with no secrets
+- Runs under your user account (non-root)
+- Enforces memory and CPU limits (tune `MemoryMax` and `CPUQuota` for your hardware)
+- Applies systemd hardening: `NoNewPrivileges`, `PrivateTmp`, `ProtectSystem`
 
 ### Service management
 
@@ -194,21 +181,22 @@ journalctl -u telegram-bot --since today
 
 The project includes a `Taskfile.yml` that automates deploy + restart over SSH.
 
+### Configure deployment targets
+
+Export these environment variables (add to your shell profile):
+
 ```bash
-# Deploy and restart the service on Jetson
+export DEPLOY_HOST=<your-device-ip-or-hostname>   # Tailscale IP, local IP, or hostname
+export DEPLOY_USER=<your-username>                 # Linux username on the target device
+```
+
+Then deploy:
+
+```bash
 task deploy
 ```
 
-This runs `rsync` to sync the project directory to the Jetson (excluding `.git`, `__pycache__`, and secrets), then SSHs in to restart the service.
-
-Configure the Jetson hostname/IP in `Taskfile.yml`:
-
-```yaml
-vars:
-  JETSON_HOST: jetson.local   # or IP address
-  JETSON_USER: omnipotence
-  JETSON_PATH: /home/omnipotence/sovereign-edge
-```
+This runs `rsync` to sync the project directory to the device (excluding `.git`, `__pycache__`, and secrets), then SSHs in to restart the service.
 
 ---
 
@@ -223,7 +211,7 @@ vars:
 journalctl -u telegram-bot -f | python3 -m json.tool
 ```
 
-5. At 05:15 Central the next morning, verify the spiritual brief arrives.
+5. At the configured morning wake time, verify the scheduled brief arrives.
 
 ---
 

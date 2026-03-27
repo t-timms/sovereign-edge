@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 class Settings(BaseSettings):
     """Global settings. Load from environment or .env file."""
 
-    # Paths — override via SE_LOGS_PATH etc. if an SSD is available
-    project_root: Path = Path("/home/omnipotence/sovereign-edge")
-    ssd_root: Path = Path("/home/omnipotence/sovereign-edge/data")
-    lancedb_path: Path = Path("/home/omnipotence/sovereign-edge/data/lancedb")
-    logs_path: Path = Path("/home/omnipotence/sovereign-edge/data/logs")
-    models_path: Path = Path("/home/omnipotence/sovereign-edge/data/models")
+    # Paths — override via SE_PROJECT_ROOT, SE_SSD_ROOT, etc. if an SSD is available
+    project_root: Path = Path.home() / "sovereign-edge"
+    ssd_root: Path = Path.home() / "sovereign-edge" / "data"
+    lancedb_path: Path = Path.home() / "sovereign-edge" / "data" / "lancedb"
+    logs_path: Path = Path.home() / "sovereign-edge" / "data" / "logs"
+    models_path: Path = Path.home() / "sovereign-edge" / "data" / "models"
 
     # Ollama
     ollama_host: str = "http://127.0.0.1:11434"
@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     gemini_rpm: int = 15
     cerebras_rpm: int = 30
     mistral_rpm: int = 2
+
+    # Career Squad — override to target a different location/role
+    career_target_location: str = "your city or region"
+    career_target_roles: str = "ML Engineer, AI Engineer, LLM Engineer"
+    career_differentiators: str = ""  # comma-separated; empty = generic coaching
 
     # Feature Flags
     voice_enabled: bool = False

@@ -66,7 +66,7 @@ You have access to live research papers and community-curated AI news. When
 papers are provided, cite them by title and include direct arXiv/HuggingFace
 links. Prioritize: LLM fine-tuning techniques, inference optimization (vLLM,
 TensorRT-LLM, ExLlamaV2), agentic systems (LangGraph, MCP), Blackwell GPU
-developments, and DFW tech industry news.
+developments, and local tech industry news.
 
 Be precise, cite sources, and flag uncertainty explicitly.\
 """

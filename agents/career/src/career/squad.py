@@ -9,13 +9,14 @@ from __future__ import annotations
 
 import time
 
+from core.config import get_settings
 from core.squad import BaseSquad
 from core.types import RoutingDecision, SquadName, TaskRequest, TaskResult
 from observability.logging import get_logger
 
 logger = get_logger(__name__, component="career")
 
-_SYSTEM_PROMPT = """\
+_FORMAT_RULES = """\
 OUTPUT FORMAT — MANDATORY:
 Your responses are delivered via Telegram, which only renders a limited Markdown
 subset. You must follow these rules exactly or the output will be unreadable.
@@ -31,42 +32,48 @@ FORBIDDEN — these render as literal characters in Telegram:
   --- dividers — never use horizontal rules
 
 Structure: one blank line between each job listing.
-Keep entries concise: company, title, location, salary, link.
-
----
-
-You are the Career Intelligence of Sovereign Edge — a world-class career strategist
-specializing in ML Engineering, AI Engineering, and LLM Engineering roles in the
-Dallas-Fort Worth metro.
-
-You have access to live search results. When job listings are provided, extract and
-present: company name, role title, location, salary range (if shown), and a direct
-application link.
-
-Emphasize the user's differentiators: GRPO fine-tuning, LangGraph agents, MCP server
-development, vLLM/TensorRT-LLM production serving, structured outputs, LLMOps,
-Blackwell GPU (RTX 5070 Ti) hands-on experience.
-
-Be direct, specific, and actionable. When no search results are available, draw on
-deep knowledge of the DFW ML market.\
+Keep entries concise: company, title, location, salary, link.\
 """
+
+
+def _build_system_prompt() -> str:
+    s = get_settings()
+    location = s.career_target_location
+    roles = s.career_target_roles
+    diff_section = (
+        f"\nEmphasize the user's differentiators: {s.career_differentiators}."
+        if s.career_differentiators
+        else ""
+    )
+    return (
+        f"{_FORMAT_RULES}\n\n---\n\n"
+        f"You are the Career Intelligence of Sovereign Edge — a world-class career strategist\n"
+        f"specializing in {roles} roles in the {location} area.\n\n"
+        f"You have access to live search results. When job listings are provided, extract and\n"
+        f"present: company name, role title, location, salary range (if shown), and a direct\n"
+        f"application link.{diff_section}\n\n"
+        f"Be direct, specific, and actionable. When no search results are available, draw on\n"
+        f"deep knowledge of the {location} ML/AI job market."
+    )
+
+
+def _build_job_search_queries() -> list[str]:
+    s = get_settings()
+    location = s.career_target_location
+    roles = s.career_target_roles.replace(", ", " OR ").replace(",", " OR ")
+    return [
+        f"{roles} {location} hiring site:linkedin.com OR site:indeed.com",
+        f"machine learning engineer jobs {location} remote apply now",
+    ]
+
 
 _MORNING_PROMPT = """\
 Based on the live job market data above, give a crisp morning career briefing (<= 150 words):
 1. One high-value action to take today (specific company to reach out to,
    specific JD to apply for, etc.)
-2. One DFW ML/AI market insight from the search results.
+2. One ML/AI market insight from the search results.
 Keep it motivating and concrete.\
 """
-
-# Search queries for DFW ML/AI job market
-_JOB_SEARCH_QUERIES = [
-    (
-        "ML Engineer LLM Engineer AI Engineer Dallas Fort Worth Texas hiring 2026"
-        " site:linkedin.com OR site:indeed.com"
-    ),
-    "machine learning engineer jobs DFW Texas remote apply now",
-]
 
 
 class CareerSquad(BaseSquad):
@@ -86,8 +93,9 @@ class CareerSquad(BaseSquad):
         # Ground with live search — only for cloud routing (never leak PII externally)
         search_context = ""
         if task.routing == RoutingDecision.CLOUD:
+            location = get_settings().career_target_location
             search_context = await jina_search(
-                f"{task.content} ML Engineer AI job Dallas Fort Worth Texas 2026",
+                f"{task.content} ML Engineer AI job {location}",
                 max_results=5,
             )
 
@@ -102,7 +110,7 @@ class CareerSquad(BaseSquad):
 
         user_input = f"<user_request>\n{task.content}\n</user_request>"
         messages = [
-            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "system", "content": _build_system_prompt()},
             *prior_turns,
             {
                 "role": "user",
@@ -139,11 +147,11 @@ class CareerSquad(BaseSquad):
 
         gateway = get_gateway()
 
-        job_context = await jina_search(_JOB_SEARCH_QUERIES[0], max_results=5)
+        job_context = await jina_search(_build_job_search_queries()[0], max_results=5)
 
         result = await gateway.complete(
             messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "system", "content": _build_system_prompt()},
                 {
                     "role": "user",
                     "content": (

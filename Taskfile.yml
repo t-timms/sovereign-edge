@@ -84,17 +84,18 @@ tasks:
   # ------------------------------------------------------------------ #
 
   deploy:
-    desc: "Sync repo to Jetson and restart service"
+    desc: "Sync repo to remote host and restart service (set DEPLOY_HOST and DEPLOY_USER env vars)"
     vars:
-      JETSON: "100.68.102.98"   # Tailscale IP
+      JETSON: "{{.DEPLOY_HOST | default \"YOUR_DEVICE_IP\"}}"   # export DEPLOY_HOST=<your-device-ip>
+      DEPLOY_USER: "{{.DEPLOY_USER | default \"YOUR_USER\"}}"   # export DEPLOY_USER=<your-username>
       REMOTE: "~/sovereign-edge"
     cmds:
       - |
         rsync -avz --exclude='.venv/' --exclude='__pycache__/' \
           --exclude='*.pyc' --exclude='.git/' \
-          . omnipotence@{{.JETSON}}:{{.REMOTE}}/
-      - ssh omnipotence@{{.JETSON}} "cd {{.REMOTE}} && uv sync --all-packages"
-      - ssh omnipotence@{{.JETSON}} "sudo systemctl restart {{.SERVICE}}"
+          . {{.DEPLOY_USER}}@{{.JETSON}}:{{.REMOTE}}/
+      - ssh {{.DEPLOY_USER}}@{{.JETSON}} "cd {{.REMOTE}} && uv sync --all-packages"
+      - ssh {{.DEPLOY_USER}}@{{.JETSON}} "sudo systemctl restart {{.SERVICE}}"
 
   # ------------------------------------------------------------------ #
   # Ollama model management                                             #
