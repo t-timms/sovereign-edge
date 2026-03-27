@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 logger = get_logger(__name__, component="telegram")
 
 _WELCOME = (
-    "👁️ *Sovereign Edge online.*\n\n"
+    "👁️ <b>Sovereign Edge online.</b>\n\n"
     "Send any message and I'll route it to the right squad.\n"
     "Use /health to check system status.\n"
     "Use /stats to see today's usage."
@@ -135,7 +135,7 @@ class SovereignEdgeBot:
             await self._app.bot.send_message(
                 chat_id=self._settings.telegram_owner_chat_id,
                 text=text,
-                parse_mode="Markdown",
+                parse_mode="HTML",
             )
         except Exception:
             logger.warning("telegram_markdown_failed — retrying as plain text")
@@ -153,15 +153,15 @@ class SovereignEdgeBot:
 
     @_auth
     async def _cmd_start(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-        await update.message.reply_text(_WELCOME, parse_mode="Markdown")
+        await update.message.reply_text(_WELCOME, parse_mode="HTML")
 
     @_auth
     async def _cmd_health(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("🔍 Checking squads…")
         health = await self._orchestrator.health_check_all()
-        lines = [f"{'✅' if ok else '❌'} *{name}*" for name, ok in sorted(health.items())]
-        text = "🏥 *Squad Health*\n\n" + "\n".join(lines) if lines else "No squads registered."
-        await update.message.reply_text(text, parse_mode="Markdown")
+        lines = [f"{'✅' if ok else '❌'} <b>{name}</b>" for name, ok in sorted(health.items())]
+        text = "🏥 <b>Squad Health</b>\n\n" + "\n".join(lines) if lines else "No squads registered."
+        await update.message.reply_text(text, parse_mode="HTML")
 
     @_auth
     async def _cmd_stats(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
@@ -173,7 +173,7 @@ class SovereignEdgeBot:
 
         avg_ms = stats.get("avg_latency_ms", 0.0)
         text = (
-            "📊 *Today's Stats*\n\n"
+            "📊 <b>Today's Stats</b>\n\n"
             f"Requests: {stats.get('total_requests', 0)}\n"
             f"Cache hits: {stats.get('cache_hits', 0)}\n"
             f"Errors: {stats.get('errors', 0)}\n"
@@ -183,23 +183,23 @@ class SovereignEdgeBot:
             f"Total cost: ${stats.get('total_cost_usd', 0.0):.4f}\n"
             f"Models: {stats.get('models_used') or 'none'}"
         )
-        await update.message.reply_text(text, parse_mode="Markdown")
+        await update.message.reply_text(text, parse_mode="HTML")
 
     @_auth
     async def _cmd_status(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         names = self._orchestrator.squad_names  # public property — no private access
         text = (
-            "⚡ *Sovereign Edge Status*\n\n"
+            "⚡ <b>Sovereign Edge Status</b>\n\n"
             f"Squads: {len(names)}\n"
             f"Registered: {', '.join(names) or 'none'}"
         )
-        await update.message.reply_text(text, parse_mode="Markdown")
+        await update.message.reply_text(text, parse_mode="HTML")
 
     @_auth
     async def _cmd_squads(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         names = self._orchestrator.squad_names  # public property — no private access
-        text = "🤖 *Registered Squads*\n\n" + "\n".join(f"• {n}" for n in names)
-        await update.message.reply_text(text, parse_mode="Markdown")
+        text = "🤖 <b>Registered Squads</b>\n\n" + "\n".join(f"• {n}" for n in names)
+        await update.message.reply_text(text, parse_mode="HTML")
 
     # ------------------------------------------------------------------ #
     # Message handler                                                      #
@@ -235,7 +235,7 @@ class SovereignEdgeBot:
             await update.message.reply_text(
                 "🤔 _Not sure which squad fits this — routing to intelligence._\n"
                 "For better results try: Bible/faith · job search · AI research · content creation",
-                parse_mode="Markdown",
+                parse_mode="HTML",
             )
 
         request = TaskRequest(
@@ -261,7 +261,7 @@ class SovereignEdgeBot:
                 if time.monotonic() - last_edit >= _STREAM_EDIT_INTERVAL and buffer:
                     try:
                         await placeholder.edit_text(
-                            _sanitize_markdown(buffer + " ▌"), parse_mode="Markdown"
+                            _sanitize_markdown(buffer + " ▌"), parse_mode="HTML"
                         )
                         last_edit = time.monotonic()
                     except Exception:
@@ -273,7 +273,7 @@ class SovereignEdgeBot:
         # Final edit — clean text, no cursor; overflow into extra messages if needed
         chunks_out = _split(_sanitize_markdown(buffer), 4000)
         try:
-            await placeholder.edit_text(chunks_out[0], parse_mode="Markdown")
+            await placeholder.edit_text(chunks_out[0], parse_mode="HTML")
         except Exception:
             try:
                 await placeholder.edit_text(chunks_out[0])
@@ -281,7 +281,7 @@ class SovereignEdgeBot:
                 logger.error("final_edit_failed", exc_info=True)
         for overflow in chunks_out[1:]:
             try:
-                await update.message.reply_text(overflow, parse_mode="Markdown")
+                await update.message.reply_text(overflow, parse_mode="HTML")
             except Exception:
                 await update.message.reply_text(overflow)
 
@@ -370,7 +370,7 @@ class SovereignEdgeBot:
 
         await update.message.reply_text(
             f"📄 Processing _{doc.file_name}_ → *{intent.value.lower()}* squad…",
-            parse_mode="Markdown",
+            parse_mode="HTML",
         )
 
         placeholder = await update.message.reply_text("…")
@@ -382,7 +382,7 @@ class SovereignEdgeBot:
                 if time.monotonic() - last_edit >= _STREAM_EDIT_INTERVAL and buffer:
                     try:
                         await placeholder.edit_text(
-                            _sanitize_markdown(buffer + " ▌"), parse_mode="Markdown"
+                            _sanitize_markdown(buffer + " ▌"), parse_mode="HTML"
                         )
                         last_edit = time.monotonic()
                     except Exception:
@@ -394,12 +394,12 @@ class SovereignEdgeBot:
         clean = _sanitize_markdown(buffer)
         chunks_out = _split(clean, 4000)
         try:
-            await placeholder.edit_text(chunks_out[0], parse_mode="Markdown")
+            await placeholder.edit_text(chunks_out[0], parse_mode="HTML")
         except Exception:
             await placeholder.edit_text(chunks_out[0])
         for overflow in chunks_out[1:]:
             try:
-                await update.message.reply_text(overflow, parse_mode="Markdown")
+                await update.message.reply_text(overflow, parse_mode="HTML")
             except Exception:
                 await update.message.reply_text(overflow)
 
@@ -462,53 +462,80 @@ async def _keep_typing(bot: Any, chat_id: int, stop: asyncio.Event) -> None:  # 
 
 
 def _sanitize_markdown(text: str) -> str:
-    """Coerce LLM output to the Telegram Markdown subset.
+    """Convert LLM Markdown output to Telegram HTML.
 
-    Telegram (MarkdownV1) only renders *bold*, _italic_, and [text](url).
-    Models default to standard Markdown (**bold**, ## headers, ---) which
-    renders as literal characters. Fix it here so prompt instructions alone
-    don't need to be perfect.
+    HTML parse mode is used instead of MarkdownV1 because unbalanced * or _
+    in LLM output trigger Telegram's "Can't parse entities" error with Markdown,
+    causing the entire message to fall back to plain text. HTML is forgiving of
+    unclosed tags and gives predictable link rendering.
     """
+    import html
     import re
 
-    # **bold** → *bold*  (non-greedy, single-line)
-    text = re.sub(r"\*\*(.+?)\*\*", r"*\1*", text)
-    # ## Any header level → plain text (strip leading #+ and space)
-    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
-    # --- dividers → remove entirely
-    text = re.sub(r"^-{3,}\s*$", "", text, flags=re.MULTILINE)
-    # Strip trailing boilerplate summary sentences the model likes to append
+    # Strip trailing boilerplate
     text = re.sub(
         r"\n*These (?:papers|results|findings|advancements|research).{0,300}$",
         "",
         text,
         flags=re.IGNORECASE | re.DOTALL,
     )
-    # Strip opening preamble lines ("Here are...", "The following...", etc.)
+    # Strip opening preamble lines
     text = re.sub(
         r"^(?:Here are|The following are|Below are|The latest)[^\n]*\n+",
         "",
         text,
         flags=re.IGNORECASE,
     )
-    # Strip mid-list transition sentences ("Additionally, X has published...")
+    # Strip mid-list transition sentences
+    text = re.sub(r"\n+Additionally,[^\n]*\n+", "\n", text, flags=re.IGNORECASE)
+    # Strip --- dividers
+    text = re.sub(r"^-{3,}\s*$", "", text, flags=re.MULTILINE)
+    # Strip ## headers (keep text)
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+
+    # Extract Markdown links [text](url) before HTML-escaping so we can
+    # reconstruct them as <a href="url">text</a> afterward.
+    _LINK_RE = re.compile(r"\[([^\]]+)\]\((https?://[^\s\)]+)\)")
+    link_placeholder: dict[str, tuple[str, str]] = {}
+
+    def _stash_link(m: re.Match) -> str:  # type: ignore[type-arg]
+        key = f"\x00LINK{len(link_placeholder)}\x00"
+        link_placeholder[key] = (m.group(1), m.group(2))
+        return key
+
+    text = _LINK_RE.sub(_stash_link, text)
+
+    # HTML-escape the remaining text (prevents injection, fixes < > & in titles)
+    text = html.escape(text)
+
+    # Restore links as <a href="url">text</a>
+    for key, (link_text, url) in link_placeholder.items():
+        safe_text = html.escape(link_text)
+        safe_url = html.escape(url)
+        text = text.replace(key, f'<a href="{safe_url}">{safe_text}</a>')
+
+    # Convert bare URLs that are NOT already inside an <a> tag
     text = re.sub(
-        r"\n+Additionally,[^\n]*\n+",
-        "\n",
+        r"(?<!href=\")(https?://[^\s<>&\"]+)",
+        lambda m: f'<a href="{m.group(1)}">{m.group(1)}</a>',
         text,
-        flags=re.IGNORECASE,
     )
-    # Convert bare URLs to [url](url) — bare URLs don't embed as links in
-    # Telegram MarkdownV1. Skip URLs already inside []() link syntax.
-    text = re.sub(r"(?<!\[)(?<!\()(https?://[^\s\)\]]+)", r"[\1](\1)", text)
-    # Bold paper titles — lines with format "Title: description"
-    # where the title isn't already wrapped in * or _
+
+    # **bold** or *bold* → <b>bold</b>
+    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text, flags=re.DOTALL)
+    text = re.sub(r"\*([^*\n]+?)\*", r"<b>\1</b>", text)
+
+    # _italic_ → <i>italic</i>
+    text = re.sub(r"_([^_\n]+?)_", r"<i>\1</i>", text)
+
+    # Bold "Title: description" lines
     text = re.sub(
-        r"^(?![*_\[•\-])([^:\n]{10,80}):([ \t])",
-        r"*\1*:\2",
+        r"^(?![<•\-])([^:\n]{10,80}):([ \t])",
+        r"<b>\1</b>:\2",
         text,
         flags=re.MULTILINE,
     )
+
     return text.strip()
 
 
