@@ -34,7 +34,10 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import (
+    Any,
+    TypedDict,  # stdlib — always available on Python 3.11+
+)
 
 from core.squad import BaseSquad
 from core.types import Intent, RoutingDecision, SquadName, TaskRequest, TaskResult
@@ -42,14 +45,12 @@ from llm.gateway import get_gateway
 
 try:
     from langgraph.graph import END, StateGraph
-    from typing_extensions import TypedDict
 
     _LANGGRAPH_AVAILABLE = True
 except ImportError:
     _LANGGRAPH_AVAILABLE = False
     StateGraph = None  # type: ignore[assignment,misc]
     END = None  # type: ignore[assignment]
-    from typing import TypedDict  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -420,4 +421,6 @@ def _build_squad_state(
         base["scripture"] = ""
     elif squad_name == SquadName.CREATIVE:
         base["trend_context"] = ""
+    else:
+        logger.warning("director_unknown_squad_state squad=%s — subgraph may KeyError", squad_name)
     return base

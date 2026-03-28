@@ -17,8 +17,8 @@ from observability.logging import get_logger
 
 from career.subgraph import (
     MORNING_PROMPT,
-    _build_search_queries,
-    _build_system_prompt,
+    build_search_queries,
+    build_system_prompt,
     career_subgraph,
 )
 
@@ -101,7 +101,7 @@ class CareerSquad(BaseSquad):
 
         user_input = f"<user_request>\n{task.content}\n</user_request>"
         messages = [
-            {"role": "system", "content": _build_system_prompt()},
+            {"role": "system", "content": build_system_prompt()},
             *history,
             {"role": "user", "content": (
                 f"Live search results:\n{search_context}\n\n---\n{user_input}"
@@ -146,11 +146,11 @@ class CareerSquad(BaseSquad):
         from search.jina import search as jina_search
 
         gateway = get_gateway()
-        job_context = await jina_search(_build_search_queries()[0], max_results=5)
+        job_context = await jina_search(build_search_queries()[0], max_results=5)
 
         result = await gateway.complete(
             messages=[
-                {"role": "system", "content": _build_system_prompt()},
+                {"role": "system", "content": build_system_prompt()},
                 {"role": "user", "content": (
                     f"Live DFW job market results:\n{job_context}\n\n---\n{MORNING_PROMPT}"
                     if job_context else MORNING_PROMPT

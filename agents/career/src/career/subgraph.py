@@ -59,7 +59,7 @@ Keep it motivating and concrete.\
 """
 
 
-def _build_system_prompt() -> str:
+def build_system_prompt() -> str:
     from core.config import get_settings
 
     s = get_settings()
@@ -82,7 +82,7 @@ def _build_system_prompt() -> str:
     )
 
 
-def _build_search_queries() -> list[str]:
+def build_search_queries() -> list[str]:
     from core.config import get_settings
 
     s = get_settings()
@@ -124,7 +124,7 @@ async def _job_searcher(state: CareerState) -> dict[str, Any]:
         from search.jina import search as jina_search
 
         if state["is_morning_brief"]:
-            query = _build_search_queries()[0]
+            query = build_search_queries()[0]
         else:
             from core.config import get_settings
             location = get_settings().career_target_location
@@ -143,7 +143,7 @@ async def _strategist(state: CareerState) -> dict[str, Any]:
     from llm.gateway import get_gateway
 
     gateway = get_gateway()
-    system_prompt = _build_system_prompt()
+    system_prompt = build_system_prompt()
 
     if state["is_morning_brief"]:
         user_content = (

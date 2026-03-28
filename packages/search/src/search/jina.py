@@ -89,14 +89,20 @@ _PRIVATE_NETS = [
 ]
 
 
-def _is_private_url(url: str) -> bool:
-    """Return True if the URL resolves to a private/loopback address."""
+async def _is_private_url(url: str) -> bool:
+    """Return True if the URL resolves to a private/loopback address.
+
+    DNS resolution runs in a thread-pool executor so the async event loop
+    is never blocked by a slow or hanging DNS query.
+    """
     try:
         parsed = urlparse(url)
         hostname = parsed.hostname or ""
         if not hostname:
             return True
-        addr = ipaddress.ip_address(socket.gethostbyname(hostname))
+        loop = asyncio.get_event_loop()
+        resolved = await loop.run_in_executor(None, socket.gethostbyname, hostname)
+        addr = ipaddress.ip_address(resolved)
         return any(addr in net for net in _PRIVATE_NETS)
     except Exception:
         return True  # Fail closed on any resolution error
@@ -156,7 +162,7 @@ async def fetch(url: str) -> str:
     No cache — URLs are typically unique per call.
     URLs resolving to private/loopback addresses are rejected (SSRF guard).
     """
-    if _is_private_url(url):
+    if await _is_private_url(url):
         logger.warning("jina_fetch_blocked_ssrf url=%r", url)
         return ""
     reader_url = f"{_READER_BASE}/{url}"

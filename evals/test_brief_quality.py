@@ -140,7 +140,7 @@ class TestMarkdownSanitizer:
 
         result = _sanitize_markdown("**bold text** in a sentence")
         assert "**" not in result
-        assert "*bold text*" in result
+        assert "<b>bold text</b>" in result
 
     def test_hash_headers_stripped(self) -> None:
         from telegram_bot.bot import _sanitize_markdown
@@ -159,7 +159,7 @@ class TestMarkdownSanitizer:
         from telegram_bot.bot import _sanitize_markdown
 
         result = _sanitize_markdown("See https://arxiv.org/abs/2501.12345 for details")
-        assert "[https://arxiv.org/abs/2501.12345](https://arxiv.org/abs/2501.12345)" in result
+        assert '<a href="https://arxiv.org/abs/2501.12345">' in result
 
     def test_existing_markdown_link_not_double_wrapped(self) -> None:
         from telegram_bot.bot import _sanitize_markdown
