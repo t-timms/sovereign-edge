@@ -1,4 +1,4 @@
-"""Base interface that all agent squads must implement."""
+"""Base interface that all agent experts must implement."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from collections.abc import AsyncGenerator
 from core.types import TaskRequest, TaskResult
 
 
-class BaseSquad(ABC):
-    """Interface that all squads must implement."""
+class BaseExpert(ABC):
+    """Interface that all experts must implement."""
 
     @property
     @abstractmethod
     def name(self) -> str:
-        """Squad identifier (e.g., 'spiritual')."""
+        """Expert identifier (e.g., 'spiritual')."""
         ...
 
     @abstractmethod
@@ -30,12 +30,12 @@ class BaseSquad(ABC):
     async def stream_process(self, task: TaskRequest) -> AsyncGenerator[str, None]:
         """Stream response chunks. Default: yields full process() result at once.
 
-        Override in squads that support true token-by-token streaming to give
+        Override in experts that support true token-by-token streaming to give
         users live feedback as the LLM generates rather than waiting for completion.
         """
         result = await self.process(task)
         yield result.content
 
     async def health_check(self) -> bool:
-        """Return True if squad is operational."""
+        """Return True if expert is operational."""
         return True

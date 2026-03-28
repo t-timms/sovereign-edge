@@ -59,13 +59,13 @@ uv run python -m telegram_bot
 ```
 sovereign-edge/
 ├── agents/
-│   ├── career/         # Career squad
-│   ├── creative/       # Creative squad
-│   ├── intelligence/   # Intelligence squad
+│   ├── career/         # Career expert
+│   ├── creative/       # Creative expert
+│   ├── intelligence/   # Intelligence expert
 │   ├── orchestrator/   # Request dispatch, scheduling, trace store
-│   └── spiritual/      # Spiritual squad
+│   └── spiritual/      # Spiritual expert
 ├── packages/
-│   ├── core/           # Config, types, BaseSquad
+│   ├── core/           # Config, types, BaseExpert
 │   ├── llm/            # LLM gateway (LiteLLM wrapper)
 │   ├── memory/         # Conversation history, semantic cache, episodic memory
 │   ├── observability/  # Structured logging
@@ -172,31 +172,31 @@ All common operations are in `Taskfile.yml`. Run `task --list` to see everything
 
 ---
 
-## Adding a New Squad
+## Adding a New Expert
 
 1. Create a new package under `agents/`:
 
 ```bash
-uv init agents/my-squad --lib
+uv init agents/my-expert --lib
 ```
 
 2. Add it to the workspace in the root `pyproject.toml`:
 
 ```toml
 [tool.uv.workspace]
-members = ["agents/my-squad", ...]
+members = ["agents/my-expert", ...]
 ```
 
-3. Implement `BaseSquad` from `core.squad`:
+3. Implement `BaseExpert` from `core.expert`:
 
 ```python
-from core.squad import BaseSquad
-from core.types import SquadName, TaskRequest, TaskResult
+from core.expert import BaseExpert
+from core.types import ExpertName, TaskRequest, TaskResult
 
-class MySquad(BaseSquad):
+class MyExpert(BaseExpert):
     @property
     def name(self) -> str:
-        return SquadName.MY_SQUAD  # add to SquadName enum in core/types.py
+        return ExpertName.MY_EXPERT  # add to ExpertName enum in core/types.py
 
     async def process(self, task: TaskRequest) -> TaskResult:
         ...
@@ -208,7 +208,7 @@ class MySquad(BaseSquad):
         ...
 ```
 
-4. Register the squad in `agents/orchestrator/src/orchestrator/main.py` and add the intent mapping in `packages/router/src/router/classifier.py`.
+4. Register the expert in `agents/orchestrator/src/orchestrator/main.py` and add the intent mapping in `packages/router/src/router/classifier.py`.
 
 ---
 
@@ -226,7 +226,7 @@ logger.info("event_name", key="value", count=42)
 
 In production (systemd), output is JSON. In development, it is colorized plain text. Set `LOG_JSON=true` to force JSON locally.
 
-Every log line automatically carries `component`, `squad`, and `model` context fields for filtering in `journalctl`:
+Every log line automatically carries `component`, `expert`, and `model` context fields for filtering in `journalctl`:
 
 ```bash
 journalctl -u telegram-bot | grep '"component":"career"'
@@ -237,7 +237,7 @@ journalctl -u telegram-bot | grep '"component":"career"'
 ## Conventional Commits
 
 ```
-feat: add episodic memory search to career squad
+feat: add episodic memory search to career expert
 fix: handle empty arXiv response gracefully
 docs: add deployment guide
 chore: bump LiteLLM to 1.82.7

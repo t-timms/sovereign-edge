@@ -43,3 +43,10 @@ services:
     environment:
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: compute,utility
+      # Flash Attention reduces KV cache memory on compatible Jetson models
+      OLLAMA_FLASH_ATTENTION: "1"
+      # Allow 2 concurrent requests; 2 loaded models (LLM + embedder)
+      OLLAMA_NUM_PARALLEL: "2"
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      # Queue up to 10 requests before dropping (morning brief fan-out)
+      OLLAMA_MAX_QUEUE: "10"

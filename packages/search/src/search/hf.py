@@ -71,8 +71,7 @@ async def fetch_daily_papers(for_date: date | None = None) -> list[dict[str, str
         title = (paper.get("title") or "").strip()
         summary = (paper.get("summary") or "").strip()[:350]
         paper_id = paper.get("id", "")
-        # upvotes is the community vote count; numComments is comment count (different field)
-        upvotes = str(paper.get("upvotes", item.get("numComments", 0)))
+        upvotes = str(paper.get("upvotes") or 0)  # 0 when field absent; never use numComments
         if title and paper_id:
             papers.append(
                 {

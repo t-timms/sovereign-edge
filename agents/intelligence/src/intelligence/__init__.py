@@ -1,5 +1,5 @@
-"""Intelligence squad — research, news synthesis, AI/ML trend monitoring."""
+"""Intelligence expert — research, news synthesis, AI/ML trend monitoring."""
 
-from intelligence.squad import IntelligenceSquad
+from intelligence.expert import IntelligenceExpert
 
-__all__ = ["IntelligenceSquad"]
+__all__ = ["IntelligenceExpert"]

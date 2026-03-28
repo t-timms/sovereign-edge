@@ -1,5 +1,5 @@
-"""Spiritual squad — faith formation, prayer, scripture study."""
+"""Spiritual expert — faith formation, prayer, scripture study."""
 
-from spiritual.squad import SpiritualSquad
+from spiritual.expert import SpiritualExpert
 
-__all__ = ["SpiritualSquad"]
+__all__ = ["SpiritualExpert"]

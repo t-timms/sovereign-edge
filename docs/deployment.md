@@ -1,12 +1,12 @@
 # Deployment
 
-Sovereign Edge runs as a systemd service on a Jetson Nano (or any Linux ARM/x86 host with Ollama). This document covers the full setup from a fresh board to a running service.
+Sovereign Edge runs as a systemd service on a Jetson Orin or any Linux ARM64/x86 host with Ollama. This document covers the full setup from a fresh board to a running service.
 
 ---
 
 ## Prerequisites
 
-- Jetson Nano with JetPack 6 (Ubuntu 22.04 base) or any Linux host
+- NVIDIA Jetson Orin (JetPack 6, Ubuntu 22.04) or any Linux ARM64/x86 host
 - Python 3.11+
 - `uv` package manager
 - Ollama installed and running
@@ -204,7 +204,7 @@ This runs `rsync` to sync the project directory to the device (excluding `.git`,
 
 1. Send `/start` to your bot in Telegram — you should receive the welcome message.
 2. Send `/stats` to confirm the trace store is recording.
-3. Send a test message ("What's a good paper on LLM inference?") — verify the intelligence squad responds with a properly formatted reply.
+3. Send a test message ("What's a good paper on LLM inference?") — verify the intelligence expert responds with a properly formatted reply.
 4. Check logs for structured JSON output:
 
 ```bash

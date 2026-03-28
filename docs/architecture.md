@@ -2,7 +2,7 @@
 
 ## Overview
 
-Sovereign Edge is a monorepo of Python packages wired together into a single async service. The Telegram bot is the only entry point. Requests flow through an intent router, are dispatched to a squad, grounded with live data, processed through the LLM gateway, and returned — with every call traced to SQLite.
+Sovereign Edge is a monorepo of Python packages wired together into a single async service. The Telegram and Discord bots are the entry points; either can be used independently. Requests flow through an intent router, are dispatched to an expert, grounded with live data, processed through the LLM gateway, and returned — with every call traced to SQLite.
 
 The system is designed around two principles: **graceful degradation** (every layer has a fallback) and **privacy by default** (PII is detected before routing and kept local).
 
@@ -31,10 +31,10 @@ IntentRouter.aroute()  [3-tier classification]
 Orchestrator.dispatch()
     ├─ Inject conversation history (last 8 turns from SQLite)
     ├─ Semantic cache lookup (cosine similarity ≥ 0.92 → return cached)
-    └─ Route to squad by intent
+    └─ Route to expert by intent
     │
     ▼
-Squad.process()
+Expert.process()
     ├─ Fetch live data in parallel (arXiv + HF, or Jina, or Bible API)
     └─ Build messages with system prompt + history + live context + user input
     │
@@ -47,7 +47,7 @@ LLMGateway.complete()
 Orchestrator (post-dispatch)
     ├─ Store response in semantic cache
     ├─ Append turn to conversation history
-    └─ Record trace (model, squad, tokens, latency, cost)
+    └─ Record trace (model, expert, tokens, latency, cost)
     │
     ▼
 Telegram reply (chunked at 4000 chars)
@@ -63,8 +63,8 @@ The gateway (`packages/llm`) wraps LiteLLM as a library (not a proxy) and manage
 
 | Priority | Provider | Model | RPM | Daily Tokens |
 |---|---|---|---|---|
-| 1 | Groq | `llama-3.3-70b-versatile` | 30 | 500K |
-| 2 | Gemini | `gemini-2.5-flash-preview-04-17` | 15 | 250K |
+| 1 | Groq | `meta-llama/llama-4-scout-17b-16e-instruct` | 30 | 500K |
+| 2 | Gemini | `gemini-2.5-flash` | 15 | 250K |
 | 3 | Cerebras | `llama-3.3-70b` | 30 | 1M |
 | 4 | Mistral | `mistral-small-latest` | 2 | 33M |
 | 5 | Ollama | `qwen3:0.6b` (local) | unlimited | unlimited |
@@ -112,7 +112,7 @@ PII detection runs before classification. If SSN, credit card, email, phone, or 
 ## Memory Layers
 
 ### Conversation History
-SQLite database (WAL mode). Stores up to 40 turns per `chat_id`. The 8 most recent turns are injected into every request as prior message context, giving squads short-term conversational memory.
+SQLite database (WAL mode). Stores up to 40 turns per `chat_id`. The 8 most recent turns are injected into every request as prior message context, giving experts short-term conversational memory.
 
 ### Semantic Cache
 LanceDB vector store. After every cloud LLM call, the query and response are stored with their embedding vector. On subsequent requests, the query is embedded and searched for cosine similarity ≥ 0.92. A cache hit returns the stored response without calling the LLM. Cache entries expire after 24 hours.
@@ -127,15 +127,15 @@ Long-term episodic memory via Mem0. Requires the `mem0ai` optional dependency. E
 The orchestrator uses APScheduler to fire six cron jobs per day (Central Time):
 
 ```
-05:00  _morning_health_check    All squads pinged in parallel
+05:00  _morning_health_check    All experts pinged in parallel
 05:15  _spiritual_brief         Live Bible verse → morning devotional
 05:30  _intelligence_brief      arXiv + HuggingFace papers → digest
-06:00  _career_brief            DFW job market search → actionable brief
+06:00  _career_brief            Job market search → actionable brief
 07:00  _creative_brief          Trend context → daily creative prompt
 18:00  _career_rescan_brief     Evening job scan
 ```
 
-Each step calls `squad.morning_brief()` with a 90-second timeout. Output is chunked at 4000 characters and pushed to the owner's Telegram chat via `send_message()`.
+Each step calls `expert.morning_brief()` with a 90-second timeout. Output is chunked at 4000 characters and pushed to the owner's Telegram chat via `send_message()`.
 
 ---
 
@@ -143,13 +143,13 @@ Each step calls `squad.morning_brief()` with a 90-second timeout. Output is chun
 
 Every completed task is recorded to a SQLite trace store (WAL mode) with:
 
-- `task_id`, `timestamp`, `squad`, `model`
+- `task_id`, `timestamp`, `expert`, `model`
 - `tokens_in`, `tokens_out`, `latency_ms`, `cost_usd`
 - `cached` (bool), `routing` (LOCAL/CLOUD/CACHE), `status`, `error_message`
 
 The `/stats` Telegram command queries today's aggregated totals: requests, cache hits, errors, average latency, total tokens, total cost, and models used.
 
-Structured logging uses structlog with JSON output in production. Every log line carries `component`, `squad`, and `model` context fields for filtering.
+Structured logging uses structlog with JSON output in production. Every log line carries `component`, `expert`, and `model` context fields for filtering.
 
 ---
 
@@ -160,6 +160,6 @@ Structured logging uses structlog with JSON output in production. Every log line
 - **Input cap:** Messages truncated at 2000 characters before processing.
 - **PII guard:** PII detected → forced local routing, no external API calls.
 - **SSRF guard:** Jina `fetch()` rejects URLs resolving to RFC 1918 / loopback addresses (fail-closed on DNS error).
-- **Prompt injection:** User input is wrapped in `<user_request>` XML delimiters in all squad prompts.
+- **Prompt injection:** User input is wrapped in `<user_request>` XML delimiters in all expert prompts.
 - **Secrets:** SOPS Age encryption. Decrypted to a `600`-permission file at service startup only.
 - **Supply chain:** HuggingFace model pinned to a specific commit hash. LiteLLM pinned to 1.82.6.

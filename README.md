@@ -2,13 +2,13 @@
 
 A personal AI intelligence system — privacy-first, edge-deployed, and grounded in live data.
 
-Sovereign Edge runs four specialized AI agents on a Jetson Nano, accessible through Telegram. Every response is grounded with real-time data: live arXiv papers, HuggingFace Daily Papers, live Bible verse retrieval, and Jina web search. PII stays local. Cloud APIs are free-tier only. A scheduled morning pipeline delivers actionable briefs before the workday starts.
+Sovereign Edge runs four specialized AI agents on a Jetson Orin or any Linux ARM64/x86 host, accessible through Telegram and Discord. Every response is grounded with real-time data: live arXiv papers, HuggingFace Daily Papers, live Bible verse retrieval, and Jina web search. PII stays local. Cloud APIs are free-tier only. A scheduled morning pipeline delivers actionable briefs before the workday starts.
 
 ---
 
-## Squads
+## Experts
 
-| Squad | Purpose | Live Data Source |
+| Expert | Purpose | Live Data Source |
 |---|---|---|
 | **Intelligence** | AI/ML research synthesis, trend monitoring | arXiv, HuggingFace Daily Papers |
 | **Career** | Job search, resume coaching, interview prep | Jina web search |
@@ -19,14 +19,14 @@ Sovereign Edge runs four specialized AI agents on a Jetson Nano, accessible thro
 
 ## Morning Pipeline
 
-Delivered automatically to Telegram each day (Central Time):
+Delivered automatically each day (times relative to `SE_MORNING_WAKE_HOUR`, default 05:00 in `SE_TIMEZONE`):
 
 | Time | Brief |
 |---|---|
-| 05:00 | Health check — all squads validated |
+| 05:00 | Health check — all experts validated |
 | 05:15 | Morning devotional with live scripture |
 | 05:30 | AI/ML intelligence digest (arXiv + HuggingFace) |
-| 06:00 | Career brief — DFW job market scan |
+| 06:00 | Career brief — job market scan |
 | 07:00 | Creative direction — daily content prompt |
 | 18:00 | Evening career rescan |
 
@@ -35,7 +35,7 @@ Delivered automatically to Telegram each day (Central Time):
 ## Architecture
 
 ```
-Telegram (owner-only)
+Telegram / Discord (owner-only)
         │
         ▼
   ┌─────────────────────────────────────────┐
@@ -54,7 +54,7 @@ Telegram (owner-only)
     ┌────────────┼────────────┬─────────────┐
     ▼            ▼            ▼             ▼
  Spiritual    Career    Intelligence    Creative
-  Squad        Squad       Squad          Squad
+  Expert        Expert       Expert          Expert
     │            │            │             │
     ▼            ▼            ▼             ▼
 Bible API    Jina Search   arXiv +       Jina Search
@@ -92,15 +92,15 @@ Bible API    Jina Search   arXiv +       Jina Search
 | Observability | structlog + SQLite trace store |
 | Secrets | SOPS (Age encryption) |
 | Scheduling | APScheduler |
-| Interface | python-telegram-bot |
-| Deployment | systemd on Jetson Nano |
+| Interface | python-telegram-bot, discord.py |
+| Deployment | systemd on ARM64/x86 Linux (Jetson Orin, Raspberry Pi, VPS) |
 
 ---
 
 ## Quick Start
 
 ```bash
-git clone https://github.com/omnipotence-eth/sovereign-edge.git
+git clone https://github.com/YOUR_USERNAME/sovereign-edge.git
 cd sovereign-edge
 
 # Install dependencies
@@ -111,10 +111,7 @@ ollama pull qwen3:0.6b
 ollama pull qwen3-embedding:0.6b
 
 # Configure environment
-cp .env.example .env        # fill in API keys and Telegram credentials
-
-# Personalize your instance (optional but recommended)
-cp SOUL.md.example SOUL.md  # define your mission, squads, and values
+cp .env.example .env        # fill in API keys and bot credentials
 
 # Run
 uv run python -m telegram_bot
@@ -126,20 +123,26 @@ See [Configuration](docs/configuration.md) for all `SE_` environment variables a
 
 ## Personalization
 
-Sovereign Edge is designed to serve one person. Two files make it yours:
+Sovereign Edge is designed to serve one person. Configuration is entirely through `.env`.
 
-**`.env`** — API keys, Telegram credentials, storage paths. Copy from `.env.example`.
+**`.env`** — API keys, bot credentials, storage paths, and career targeting. Copy from `.env.example`.
 
-**`SOUL.md`** — Your identity document: who the system serves, what each squad is optimized for, and what values govern it. Copy from `SOUL.md.example`. This file is gitignored and never leaves your machine.
+The career expert is personalized through three environment variables:
 
-The career squad system prompt in `agents/career/src/career/squad.py` is the other place to personalize — update it with your target roles, market, and differentiators.
+| Variable | Example |
+|---|---|
+| `SE_CAREER_TARGET_LOCATION` | `Austin, TX` |
+| `SE_CAREER_TARGET_ROLES` | `ML Engineer, AI Engineer, LLM Engineer` |
+| `SE_CAREER_DIFFERENTIATORS` | `GRPO fine-tuning, LangGraph agents, vLLM serving` |
+
+See [Configuration](docs/configuration.md) for all `SE_` variables.
 
 ---
 
 ## Documentation
 
 - [Architecture](docs/architecture.md) — request flow, memory layers, LLM gateway
-- [Squads](docs/squads.md) — each agent's capabilities and data sources
+- [Experts](docs/experts.md) — each agent's capabilities and data sources
 - [Configuration](docs/configuration.md) — all environment variables
 - [Deployment](docs/deployment.md) — Jetson setup, systemd, secrets
 - [Development](docs/development.md) — local setup, testing, code quality

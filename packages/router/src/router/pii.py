@@ -16,6 +16,25 @@ class PIIMatch:
     end: int
 
 
+def _luhn_valid(value: str) -> bool:
+    """Return True if the digit sequence passes the Luhn checksum (credit card validation).
+
+    Prevents false positives on 16-digit sequences such as ISBNs, tracking numbers,
+    and model IDs — real credit card numbers must satisfy the Luhn algorithm.
+    """
+    digits = [int(c) for c in value if c.isdigit()]
+    if len(digits) < 13:
+        return False
+    total = 0
+    for i, d in enumerate(reversed(digits)):
+        if i % 2 == 1:
+            d *= 2
+            if d > 9:
+                d -= 9
+        total += d
+    return total % 10 == 0
+
+
 # Patterns ordered by specificity (most specific first)
 _PII_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("SSN", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
@@ -37,13 +56,20 @@ class PIIDetector:
 
     def contains_pii(self, text: str) -> bool:
         """Fast check — returns True if any PII pattern matches."""
-        return any(pattern.search(text) for _, pattern in _PII_PATTERNS)
+        for pii_type, pattern in _PII_PATTERNS:
+            for match in pattern.finditer(text):
+                if pii_type == "CREDIT_CARD" and not _luhn_valid(match.group()):
+                    continue
+                return True
+        return False
 
     def detect_all(self, text: str) -> list[PIIMatch]:
         """Full scan — returns all PII matches with types and positions."""
         matches: list[PIIMatch] = []
         for pii_type, pattern in _PII_PATTERNS:
             for match in pattern.finditer(text):
+                if pii_type == "CREDIT_CARD" and not _luhn_valid(match.group()):
+                    continue
                 matches.append(
                     PIIMatch(
                         type=pii_type,
@@ -58,5 +84,11 @@ class PIIDetector:
         """Replace PII with type labels for safe cloud transmission."""
         result = text
         for pii_type, pattern in _PII_PATTERNS:
-            result = pattern.sub(f"[{pii_type}_REDACTED]", result)
+            if pii_type == "CREDIT_CARD":
+                result = pattern.sub(
+                    lambda m, _t=pii_type: f"[{_t}_REDACTED]" if _luhn_valid(m.group()) else m.group(),
+                    result,
+                )
+            else:
+                result = pattern.sub(f"[{pii_type}_REDACTED]", result)
         return result

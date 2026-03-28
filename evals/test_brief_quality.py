@@ -1,5 +1,5 @@
 """
-Brief quality evals — assert structural integrity of squad outputs.
+Brief quality evals — assert structural integrity of expert outputs.
 
 These are not unit tests of internal logic; they test output contracts:
 the things a degraded or hallucinating LLM would violate. Run alongside
@@ -13,7 +13,7 @@ import re
 import pytest
 
 # ---------------------------------------------------------------------------
-# Helpers (mirrors BriefOutput logic without importing the squad)
+# Helpers (mirrors BriefOutput logic without importing the expert)
 # ---------------------------------------------------------------------------
 
 def _has_link(text: str) -> bool:
@@ -82,7 +82,7 @@ class TestIntelligenceBriefContracts:
         assert _word_count(self.WALL_OF_TEXT) >= 300
 
     def test_brief_output_model_validates(self) -> None:
-        from intelligence.squad import BriefOutput
+        from intelligence.expert import BriefOutput
 
         good = BriefOutput(content=self.GOOD_BRIEF)
         assert good.is_valid
@@ -94,7 +94,7 @@ class TestIntelligenceBriefContracts:
         assert bad.link_count == 0
 
     def test_brief_output_empty_content_invalid(self) -> None:
-        from intelligence.squad import BriefOutput
+        from intelligence.expert import BriefOutput
 
         empty = BriefOutput(content="")
         assert not empty.is_valid

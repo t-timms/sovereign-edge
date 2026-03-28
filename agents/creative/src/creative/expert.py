@@ -1,8 +1,8 @@
 """
-Career squad — job search, resume coaching, interview prep.
+Creative expert — writing, content strategy, social media, storytelling.
 
-Delegates to ``career_subgraph`` (LangGraph) for the full pipeline:
-  job_searcher → strategist
+Delegates to ``creative_subgraph`` (LangGraph) for the full pipeline:
+  trend_researcher → writer
 
 Falls back to a direct gateway call when LangGraph is unavailable.
 """
@@ -11,31 +11,30 @@ from __future__ import annotations
 
 import time
 
-from core.squad import BaseSquad
-from core.types import RoutingDecision, SquadName, TaskRequest, TaskResult
+from core.expert import BaseExpert
+from core.types import RoutingDecision, ExpertName, TaskRequest, TaskResult
 from observability.logging import get_logger
 
-from career.subgraph import (
+from creative.subgraph import (
     MORNING_PROMPT,
-    build_search_queries,
-    build_system_prompt,
-    career_subgraph,
+    SYSTEM_PROMPT,
+    creative_subgraph,
 )
 
-logger = get_logger(__name__, component="career")
+logger = get_logger(__name__, component="creative")
 
 
-class CareerSquad(BaseSquad):
-    """Handles career tasks and generates morning job-search briefings."""
+class CreativeExpert(BaseExpert):
+    """Handles creative writing tasks and generates daily creative prompts."""
 
     @property
     def name(self) -> str:
-        return SquadName.CAREER
+        return ExpertName.CREATIVE
 
     async def process(self, task: TaskRequest) -> TaskResult:
         t0 = time.monotonic()
 
-        if career_subgraph is not None:
+        if creative_subgraph is not None:
             return await self._process_via_subgraph(task, t0)
         return await self._process_direct(task, t0)
 
@@ -49,12 +48,12 @@ class CareerSquad(BaseSquad):
             except (ValueError, TypeError):
                 pass
 
-        result = await career_subgraph.ainvoke({
+        result = await creative_subgraph.ainvoke({
             "query": task.content,
             "routing": task.routing,
             "history": history,
             "is_morning_brief": False,
-            "search_results": "",
+            "trend_context": "",
             "response": "",
             "model_used": "",
             "tokens_in": 0,
@@ -64,7 +63,7 @@ class CareerSquad(BaseSquad):
 
         return TaskResult(
             task_id=task.task_id,
-            squad=SquadName.CAREER,
+            expert=ExpertName.CREATIVE,
             content=result["response"],
             model_used=result["model_used"],
             tokens_in=result["tokens_in"],
@@ -72,7 +71,7 @@ class CareerSquad(BaseSquad):
             latency_ms=(time.monotonic() - t0) * 1000,
             cost_usd=result["cost_usd"],
             routing=task.routing,
-            metadata={"nodes": "job_searcher,strategist"},
+            metadata={"nodes": "trend_researcher,writer"},
         )
 
     async def _process_direct(self, task: TaskRequest, t0: float) -> TaskResult:
@@ -83,13 +82,11 @@ class CareerSquad(BaseSquad):
         from search.jina import search as jina_search
 
         gateway = get_gateway()
-        search_context = ""
+        trend_context = ""
 
         if task.routing == RoutingDecision.CLOUD:
-            from core.config import get_settings
-            location = get_settings().career_target_location
-            search_context = await jina_search(
-                f"{task.content} ML Engineer AI job {location}", max_results=5,
+            trend_context = await jina_search(
+                f"{task.content} content strategy examples 2026", max_results=3,
             )
 
         history: list[dict[str, str]] = []
@@ -101,21 +98,21 @@ class CareerSquad(BaseSquad):
 
         user_input = f"<user_request>\n{task.content}\n</user_request>"
         messages = [
-            {"role": "system", "content": build_system_prompt()},
+            {"role": "system", "content": SYSTEM_PROMPT},
             *history,
             {"role": "user", "content": (
-                f"Live search results:\n{search_context}\n\n---\n{user_input}"
-                if search_context else user_input
+                f"Current trends and context:\n{trend_context}\n\n---\n{user_input}"
+                if trend_context else user_input
             )},
         ]
 
         result = await gateway.complete(
-            messages=messages, max_tokens=1500, routing=task.routing, squad=self.name,
+            messages=messages, max_tokens=2048, routing=task.routing, expert=self.name,
         )
 
         return TaskResult(
             task_id=task.task_id,
-            squad=SquadName.CAREER,
+            expert=ExpertName.CREATIVE,
             content=result["content"],
             model_used=result["model"],
             tokens_in=result["tokens_in"],
@@ -126,13 +123,13 @@ class CareerSquad(BaseSquad):
         )
 
     async def morning_brief(self) -> str:
-        if career_subgraph is not None:
-            result = await career_subgraph.ainvoke({
+        if creative_subgraph is not None:
+            result = await creative_subgraph.ainvoke({
                 "query": "",
                 "routing": RoutingDecision.CLOUD,
                 "history": [],
                 "is_morning_brief": True,
-                "search_results": "",
+                "trend_context": "",
                 "response": "",
                 "model_used": "",
                 "tokens_in": 0,
@@ -146,19 +143,21 @@ class CareerSquad(BaseSquad):
         from search.jina import search as jina_search
 
         gateway = get_gateway()
-        job_context = await jina_search(build_search_queries()[0], max_results=5)
+        trend_context = await jina_search(
+            "AI content creation trends 2026 creator economy", max_results=3,
+        )
 
         result = await gateway.complete(
             messages=[
-                {"role": "system", "content": build_system_prompt()},
+                {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": (
-                    f"Live DFW job market results:\n{job_context}\n\n---\n{MORNING_PROMPT}"
-                    if job_context else MORNING_PROMPT
+                    f"Current trends and context:\n{trend_context}\n\n---\n{MORNING_PROMPT}"
+                    if trend_context else MORNING_PROMPT
                 )},
             ],
-            max_tokens=250,
+            max_tokens=150,
             routing=RoutingDecision.CLOUD,
-            squad=self.name,
+            expert=self.name,
         )
         return result["content"]
 
@@ -171,5 +170,5 @@ class CareerSquad(BaseSquad):
             )
             return bool(result.get("content"))
         except Exception:
-            logger.warning("career_health_check_failed", exc_info=True)
+            logger.warning("creative_health_check_failed", exc_info=True)
             return False

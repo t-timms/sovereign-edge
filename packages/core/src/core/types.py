@@ -19,8 +19,8 @@ class Intent(StrEnum):
     GENERAL = "GENERAL"
 
 
-class SquadName(StrEnum):
-    """Agent squad identifiers."""
+class ExpertName(StrEnum):
+    """Agent expert identifiers."""
 
     SPIRITUAL = "spiritual"
     CAREER = "career"
@@ -35,7 +35,7 @@ class TaskPriority(StrEnum):
 
     CRITICAL = "P0"  # HITL response, security alert
     HIGH = "P1"  # Director orchestration, morning digest
-    NORMAL = "P2"  # Squad worker tasks
+    NORMAL = "P2"  # Expert worker tasks
     LOW = "P3"  # Content generation, non-urgent
 
 
@@ -48,24 +48,24 @@ class RoutingDecision(StrEnum):
 
 
 class TaskRequest(BaseModel):
-    """A task submitted to any squad."""
+    """A task submitted to any expert."""
 
     task_id: UUID = Field(default_factory=uuid4)
     content: str
     intent: Intent
     routing: RoutingDecision
     priority: TaskPriority = TaskPriority.NORMAL
-    squad: SquadName = SquadName.GENERAL
+    expert: ExpertName = ExpertName.GENERAL
     context: dict[str, str] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     pii_detected: bool = False
 
 
 class TaskResult(BaseModel):
-    """Result from a squad's processing."""
+    """Result from an expert's processing."""
 
     task_id: UUID
-    squad: SquadName
+    expert: ExpertName
     content: str
     model_used: str
     routing: RoutingDecision = RoutingDecision.CLOUD

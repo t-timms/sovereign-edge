@@ -1,7 +1,7 @@
 """
 structlog configuration — ~5MB RAM, JSON output.
 
-Every log line includes: timestamp, level, squad, model, trace_id.
+Every log line includes: timestamp, level, expert, model, trace_id.
 """
 
 from __future__ import annotations
@@ -30,5 +30,15 @@ def setup_logging(debug: bool = False) -> None:
 
 
 def get_logger(name: str, **initial_context: str) -> structlog.BoundLogger:
-    """Get a logger with initial context (e.g., squad name)."""
+    """Get a logger with initial context (e.g., expert name)."""
     return structlog.get_logger(name).bind(**initial_context)
+
+
+def set_trace_id(trace_id: str) -> None:
+    """Bind trace_id to the current async context for all subsequent log entries."""
+    structlog.contextvars.bind_contextvars(trace_id=trace_id)
+
+
+def clear_trace_id() -> None:
+    """Remove trace_id binding from the current async context."""
+    structlog.contextvars.unbind_contextvars("trace_id")

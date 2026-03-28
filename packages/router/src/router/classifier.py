@@ -157,7 +157,7 @@ _INTENT_PROTOTYPES: dict[Intent, list[str]] = {
 
 
 class IntentRouter:
-    """Routes user input to the appropriate squad."""
+    """Routes user input to the appropriate expert."""
 
     def __init__(self, model_path: str | None = None) -> None:
         self.pii_detector = PIIDetector()
@@ -239,8 +239,12 @@ class IntentRouter:
         """Embed query and score against per-intent prototype sentences.
 
         Returns (None, None) on any failure so callers can degrade gracefully.
+        Prototype embeddings are computed via asyncio.to_thread to avoid blocking
+        the event loop on the first call (subsequent calls are served from LRU cache).
         """
         try:
+            import asyncio
+
             from memory.embeddings import aembed, cosine_similarity, embed_cached
 
             query_vec = await aembed(text)
@@ -252,7 +256,8 @@ class IntentRouter:
 
             for intent, prototypes in _INTENT_PROTOTYPES.items():
                 for proto in prototypes:
-                    cached = embed_cached(proto)
+                    # Run in thread to avoid blocking the event loop on first (uncached) call
+                    cached = await asyncio.to_thread(embed_cached, proto)
                     if cached is None:
                         continue
                     proto_vec = np.array(cached, dtype=np.float32)
@@ -274,7 +279,8 @@ class IntentRouter:
     def _classify_onnx(self, text: str) -> tuple[Intent, float]:
         """Classify using fine-tuned DistilBERT ONNX model."""
         if self._tokenizer is None or self._onnx_session is None:
-            raise RuntimeError("ONNX classifier called before tokenizer/session initialised")
+            logger.warning("onnx_classifier_unavailable — falling back to keyword classifier")
+            return self._classify_keywords(text)
 
         inputs = self._tokenizer(
             text, return_tensors="np", truncation=True, max_length=128, padding="max_length"

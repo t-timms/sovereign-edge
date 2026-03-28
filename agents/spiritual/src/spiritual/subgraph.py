@@ -1,5 +1,5 @@
 """
-Spiritual squad — LangGraph subgraph.
+Spiritual expert — LangGraph subgraph.
 
 Pipeline:
     START → scripture_fetcher → theologian → END
@@ -151,7 +151,7 @@ async def _theologian(state: SpiritualState) -> dict[str, Any]:
         messages=messages,
         max_tokens=max_tokens,
         routing=state["routing"],
-        squad="spiritual",
+        expert="spiritual",
     )
 
     return {
@@ -175,7 +175,7 @@ def _build() -> Any:
     builder.add_edge("scripture_fetcher", "theologian")
     builder.add_edge("theologian", END)
 
-    return builder.compile(name="spiritual_squad")
+    return builder.compile(name="spiritual_expert")
 
 
 spiritual_subgraph = _build() if _LANGGRAPH_AVAILABLE else None

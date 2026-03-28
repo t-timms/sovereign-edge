@@ -1,5 +1,5 @@
-"""Creative squad — writing, content ideation, social media, storytelling."""
+"""Creative expert — writing, content ideation, social media, storytelling."""
 
-from creative.squad import CreativeSquad
+from creative.expert import CreativeExpert
 
-__all__ = ["CreativeSquad"]
+__all__ = ["CreativeExpert"]

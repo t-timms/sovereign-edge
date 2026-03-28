@@ -7,6 +7,8 @@ Stores memories locally (no cloud dependency for memory operations).
 
 from __future__ import annotations
 
+import asyncio
+import functools
 import logging
 
 from core.config import get_settings
@@ -23,6 +25,9 @@ class EpisodicMemory:
     - Personal facts ("target salary is $80K")
     - Work patterns ("most productive before 10am")
     - Relationships ("manager's name is X")
+
+    Use the async variants (add_async, search_async) from async call sites
+    to avoid blocking the event loop during Mem0's Ollama LLM + embedding calls.
     """
 
     def __init__(self) -> None:
@@ -59,7 +64,7 @@ class EpisodicMemory:
             self._memory = None
 
     def add(self, text: str, user_id: str = "default", metadata: dict | None = None) -> None:
-        """Extract and store facts from a text."""
+        """Extract and store facts from a text (synchronous — blocks the caller)."""
         if not self._available or not self._memory:
             return
         try:
@@ -67,8 +72,29 @@ class EpisodicMemory:
         except Exception as e:
             logger.error("Failed to add memory: %s", e, exc_info=True)
 
+    async def add_async(
+        self, text: str, user_id: str = "default", metadata: dict | None = None
+    ) -> None:
+        """Non-blocking add — runs Mem0's sync extraction in a thread-pool executor.
+
+        Prefer this over add() in async call sites. Mem0's Ollama LLM + embedding
+        calls take 200–800 ms and must not stall the asyncio event loop.
+        """
+        if not self._available or not self._memory:
+            return
+        loop = asyncio.get_event_loop()
+        try:
+            await loop.run_in_executor(
+                None,
+                functools.partial(
+                    self._memory.add, text, user_id=user_id, metadata=metadata or {}
+                ),
+            )
+        except Exception as e:
+            logger.error("Failed to add memory (async): %s", e, exc_info=True)
+
     def search(self, query: str, user_id: str = "default", limit: int = 5) -> list[dict]:
-        """Search episodic memories by semantic similarity."""
+        """Search episodic memories by semantic similarity (synchronous)."""
         if not self._available or not self._memory:
             return []
         try:
@@ -76,6 +102,23 @@ class EpisodicMemory:
             return results.get("results", []) if isinstance(results, dict) else results
         except Exception as e:
             logger.error("Memory search failed: %s", e, exc_info=True)
+            return []
+
+    async def search_async(
+        self, query: str, user_id: str = "default", limit: int = 5
+    ) -> list[dict]:
+        """Non-blocking search — runs Mem0's sync embedding + retrieval in executor."""
+        if not self._available or not self._memory:
+            return []
+        loop = asyncio.get_event_loop()
+        try:
+            results = await loop.run_in_executor(
+                None,
+                functools.partial(self._memory.search, query, user_id=user_id, limit=limit),
+            )
+            return results.get("results", []) if isinstance(results, dict) else results
+        except Exception as e:
+            logger.error("Memory search failed (async): %s", e, exc_info=True)
             return []
 
     def get_all(self, user_id: str = "default") -> list[dict]:

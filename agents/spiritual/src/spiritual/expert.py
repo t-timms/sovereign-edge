@@ -1,5 +1,5 @@
 """
-Spiritual squad — faith formation, prayer, scripture study, devotionals.
+Spiritual expert — faith formation, prayer, scripture study, devotionals.
 
 Delegates to ``spiritual_subgraph`` (LangGraph) for the full pipeline:
   scripture_fetcher → theologian
@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import time
 
-from core.squad import BaseSquad
-from core.types import RoutingDecision, SquadName, TaskRequest, TaskResult
+from core.expert import BaseExpert
+from core.types import RoutingDecision, ExpertName, TaskRequest, TaskResult
 from observability.logging import get_logger
 
 from spiritual.subgraph import (
@@ -24,12 +24,12 @@ from spiritual.subgraph import (
 logger = get_logger(__name__, component="spiritual")
 
 
-class SpiritualSquad(BaseSquad):
+class SpiritualExpert(BaseExpert):
     """Handles faith-formation tasks and generates morning devotionals."""
 
     @property
     def name(self) -> str:
-        return SquadName.SPIRITUAL
+        return ExpertName.SPIRITUAL
 
     async def process(self, task: TaskRequest) -> TaskResult:
         t0 = time.monotonic()
@@ -63,7 +63,7 @@ class SpiritualSquad(BaseSquad):
 
         return TaskResult(
             task_id=task.task_id,
-            squad=SquadName.SPIRITUAL,
+            expert=ExpertName.SPIRITUAL,
             content=result["response"],
             model_used=result["model_used"],
             tokens_in=result["tokens_in"],
@@ -108,12 +108,12 @@ class SpiritualSquad(BaseSquad):
         ]
 
         result = await gateway.complete(
-            messages=messages, max_tokens=1024, routing=task.routing, squad=self.name,
+            messages=messages, max_tokens=1024, routing=task.routing, expert=self.name,
         )
 
         return TaskResult(
             task_id=task.task_id,
-            squad=SquadName.SPIRITUAL,
+            expert=ExpertName.SPIRITUAL,
             content=result["content"],
             model_used=result["model"],
             tokens_in=result["tokens_in"],
@@ -161,7 +161,7 @@ class SpiritualSquad(BaseSquad):
             ],
             max_tokens=300,
             routing=RoutingDecision.CLOUD,
-            squad=self.name,
+            expert=self.name,
         )
         return result["content"]
 

@@ -26,17 +26,28 @@ _TRANSLATION = "kjv"
 _MAX_RETRIES = 2
 _RETRY_BASE_DELAY = 1.0
 
-# Matches common scripture references: "John 3:16", "Psalm 23", "1 Corinthians 13:4-7"
+# Matches common scripture references: "John 3:16", "Jn 3:16", "Ps 23", "1 Cor 13:4-7"
+# Includes full names and standard abbreviations (SBL/common usage).
 _REF_PATTERN = re.compile(
-    r"\b(?:\d\s+)?(?:genesis|exodus|leviticus|numbers|deuteronomy|joshua|judges|ruth"
-    r"|(?:1|2|3)\s*samuel|(?:1|2)\s*kings|(?:1|2)\s*chronicles|ezra|nehemiah|esther"
-    r"|job|psalms?|proverbs|ecclesiastes|song\s+of\s+solomon|isaiah|jeremiah"
-    r"|lamentations|ezekiel|daniel|hosea|joel|amos|obadiah|jonah|micah|nahum"
-    r"|habakkuk|zephaniah|haggai|zechariah|malachi|matthew|mark|luke|john|acts"
-    r"|romans|(?:1|2)\s*corinthians|galatians|ephesians|philippians|colossians"
-    r"|(?:1|2)\s*thessalonians|(?:1|2)\s*timothy|titus|philemon|hebrews|james"
-    r"|(?:1|2)\s*peter|(?:1|2|3)\s*john|jude|revelation)"
-    r"(?:\s+\d+(?::\d+(?:-\d+)?)?)?",
+    r"\b(?:\d\s+)?(?:"
+    # Old Testament
+    r"gen(?:esis)?|exod?(?:us)?|lev(?:iticus)?|num(?:bers)?|deut(?:eronomy)?"
+    r"|josh(?:ua)?|judg(?:es)?|ruth"
+    r"|(?:1|2|3)\s*sam(?:uel)?|(?:1|2)\s*k(?:gs|ings)|(?:1|2)\s*chr(?:on(?:icles)?)?"
+    r"|ezra|neh(?:emiah)?|esth?(?:er)?"
+    r"|job|ps(?:a|alms?)?|prov(?:erbs)?|eccl?(?:esiastes)?"
+    r"|song\s+of\s+solomon|isa(?:iah)?|jer(?:emiah)?|lam(?:entations)?"
+    r"|ezek?(?:iel)?|dan(?:iel)?|hos(?:ea)?|joel|amos|obad(?:iah)?"
+    r"|jon(?:ah)?|mic(?:ah)?|nah(?:um)?|hab(?:akkuk)?|zeph(?:aniah)?"
+    r"|hag(?:gai)?|zech(?:ariah)?|mal(?:achi)?"
+    # New Testament
+    r"|matt?(?:hew)?|mk|mar(?:k)?|lk|luke|jn|john|acts"
+    r"|rom(?:ans)?|(?:1|2)\s*cor(?:inthians)?|gal(?:atians)?|eph(?:esians)?"
+    r"|phil(?:ippians)?|col(?:ossians)?|(?:1|2)\s*thess?(?:alonians)?"
+    r"|(?:1|2)\s*tim(?:othy)?|tit(?:us)?|phlm?|philemon|heb(?:rews)?"
+    r"|jas?(?:mes)?|(?:1|2)\s*pet(?:er)?|(?:1|2|3)\s*jn|(?:1|2|3)\s*john"
+    r"|jude|rev(?:elation)?"
+    r")(?:\s+\d+(?::\d+(?:-\d+)?)?)?",
     re.IGNORECASE,
 )
 
@@ -90,8 +101,13 @@ async def random_verse() -> dict[str, str]:
     return {"reference": "", "text": "", "translation": ""}
 
 
-async def lookup(reference: str) -> dict[str, str]:
-    """Look up a verse or passage (e.g. 'John 3:16', 'Psalm 23', '1 Cor 13:4-7')."""
+async def lookup(reference: str | None) -> dict[str, str]:
+    """Look up a verse or passage (e.g. 'John 3:16', 'Psalm 23', '1 Cor 13:4-7').
+
+    Returns empty result dict when reference is None or empty.
+    """
+    if not reference:
+        return {"reference": "", "text": "", "translation": ""}
     clean = reference.strip().replace(" ", "+")
     client = _get_client()
     url = f"{_BASE}/{clean}?translation={_TRANSLATION}"

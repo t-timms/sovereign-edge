@@ -1,5 +1,5 @@
 """
-Creative squad — LangGraph subgraph.
+Creative expert — LangGraph subgraph.
 
 Pipeline:
     START → trend_researcher → writer → END
@@ -151,7 +151,7 @@ async def _writer(state: CreativeState) -> dict[str, Any]:
         messages=messages,
         max_tokens=max_tokens,
         routing=state["routing"],
-        squad="creative",
+        expert="creative",
     )
 
     return {
@@ -175,7 +175,7 @@ def _build() -> Any:
     builder.add_edge("trend_researcher", "writer")
     builder.add_edge("writer", END)
 
-    return builder.compile(name="creative_squad")
+    return builder.compile(name="creative_expert")
 
 
 creative_subgraph = _build() if _LANGGRAPH_AVAILABLE else None

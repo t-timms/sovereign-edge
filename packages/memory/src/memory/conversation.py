@@ -2,7 +2,7 @@
 Per-chat conversation history in SQLite.
 
 Stores the last MAX_STORED turns per chat_id and exposes the most recent
-MAX_TURNS for injection into squad prompts as proper message turns.
+MAX_TURNS for injection into expert prompts as proper message turns.
 Same WAL-mode SQLite path as traces — co-located for easy backup.
 """
 
@@ -11,13 +11,14 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+import threading
 from datetime import UTC, datetime
 
 from core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-MAX_TURNS = 8  # turns injected into each squad request
+MAX_TURNS = 8  # turns injected into each expert request
 MAX_STORED = 40  # turns retained per chat_id before pruning
 
 
@@ -33,46 +34,50 @@ class ConversationStore:
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA synchronous=NORMAL")
         self.conn.execute("PRAGMA cache_size=-4000")
+        # Serialize writes — SQLite WAL allows concurrent reads but not concurrent writes
+        self._lock = threading.Lock()
         self._create_tables()
         logger.info("conversation_store_initialized path=%s", db_path)
 
     def _create_tables(self) -> None:
-        self.conn.executescript("""
-            CREATE TABLE IF NOT EXISTS turns (
-                id       INTEGER PRIMARY KEY AUTOINCREMENT,
-                chat_id  TEXT NOT NULL,
-                role     TEXT NOT NULL,
-                content  TEXT NOT NULL,
-                squad    TEXT DEFAULT '',
-                ts       TEXT NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_turns_chat
-                ON turns(chat_id, id DESC);
-        """)
-        self.conn.commit()
+        with self._lock:
+            self.conn.executescript("""
+                CREATE TABLE IF NOT EXISTS turns (
+                    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+                    chat_id  TEXT NOT NULL,
+                    role     TEXT NOT NULL,
+                    content  TEXT NOT NULL,
+                    expert    TEXT DEFAULT '',
+                    ts       TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_turns_chat
+                    ON turns(chat_id, id DESC);
+            """)
+            self.conn.commit()
 
     def add_turn(
         self,
         chat_id: str,
         role: str,
         content: str,
-        squad: str = "",
+        expert: str = "",
     ) -> None:
         """Append a turn and prune if over MAX_STORED."""
         try:
-            self.conn.execute(
-                "INSERT INTO turns (chat_id, role, content, squad, ts) VALUES (?,?,?,?,?)",
-                (chat_id, role, content, squad, datetime.now(UTC).isoformat()),
-            )
-            # Keep only the newest MAX_STORED turns per chat
-            self.conn.execute(
-                """DELETE FROM turns
-                   WHERE chat_id = ? AND id NOT IN (
-                       SELECT id FROM turns WHERE chat_id = ?
-                       ORDER BY id DESC LIMIT ?)""",
-                (chat_id, chat_id, MAX_STORED),
-            )
-            self.conn.commit()
+            with self._lock:
+                self.conn.execute(
+                    "INSERT INTO turns (chat_id, role, content, expert, ts) VALUES (?,?,?,?,?)",
+                    (chat_id, role, content, expert, datetime.now(UTC).isoformat()),
+                )
+                # Keep only the newest MAX_STORED turns per chat
+                self.conn.execute(
+                    """DELETE FROM turns
+                       WHERE chat_id = ? AND id NOT IN (
+                           SELECT id FROM turns WHERE chat_id = ?
+                           ORDER BY id DESC LIMIT ?)""",
+                    (chat_id, chat_id, MAX_STORED),
+                )
+                self.conn.commit()
         except sqlite3.Error:
             logger.error("conversation_add_turn_failed chat_id=%s", chat_id, exc_info=True)
 
@@ -96,8 +101,9 @@ class ConversationStore:
     def clear(self, chat_id: str) -> None:
         """Delete all stored turns for a chat_id."""
         try:
-            self.conn.execute("DELETE FROM turns WHERE chat_id=?", (chat_id,))
-            self.conn.commit()
+            with self._lock:
+                self.conn.execute("DELETE FROM turns WHERE chat_id=?", (chat_id,))
+                self.conn.commit()
         except sqlite3.Error:
             logger.error("conversation_clear_failed chat_id=%s", chat_id, exc_info=True)
 

@@ -1,7 +1,7 @@
 """
 LanceDB vector store — embedded, disk-based, ~100MB RAM.
 
-Provides domain-specific tables for each squad plus a shared personal table.
+Provides domain-specific tables for each expert plus a shared personal table.
 Uses Qwen3-Embedding-0.6B via Ollama for embeddings.
 """
 

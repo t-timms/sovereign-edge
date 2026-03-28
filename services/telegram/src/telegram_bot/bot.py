@@ -6,10 +6,10 @@ returns responses. Only the owner chat ID is authorised.
 
 Commands:
   /start   — greeting
-  /health  — squad health status
+  /health  — expert health status
   /stats   — today's usage and cost stats (TraceStore)
-  /status  — current squad + routing info
-  /squads  — list registered squads
+  /status  — current expert + routing info
+  /experts  — list registered experts
 """
 
 from __future__ import annotations
@@ -41,13 +41,19 @@ logger = get_logger(__name__, component="telegram")
 
 _WELCOME = (
     "👁️ <b>Sovereign Edge online.</b>\n\n"
-    "Send any message and I'll route it to the right squad.\n"
+    "Send any message and I'll route it to the right expert.\n"
     "Use /health to check system status.\n"
     "Use /stats to see today's usage."
 )
 
 # Maximum characters accepted from user input — prevents context-window flooding
 _MAX_INPUT_CHARS = 2000
+
+# Maximum characters buffered from a single streaming response — prevents OOM on runaway LLMs
+_MAX_BUFFER_CHARS = 16_000
+
+# Maximum file size accepted for document upload — prevents large binary downloads
+_MAX_FILE_BYTES = 20 * 1024 * 1024  # 20 MB
 
 # Per-chat rate limiting: max 1 request per N seconds
 _RATE_LIMIT_SECONDS = 2.0
@@ -96,7 +102,7 @@ class SovereignEdgeBot:
     # ------------------------------------------------------------------ #
 
     async def start(self) -> None:
-        token = self._settings.telegram_bot_token
+        token = self._settings.telegram_bot_token.get_secret_value()
         if not token:
             logger.warning("telegram_token_missing — bot disabled")
             return
@@ -111,7 +117,7 @@ class SovereignEdgeBot:
         self._app.add_handler(CommandHandler("health", self._cmd_health))
         self._app.add_handler(CommandHandler("stats", self._cmd_stats))
         self._app.add_handler(CommandHandler("status", self._cmd_status))
-        self._app.add_handler(CommandHandler("squads", self._cmd_squads))
+        self._app.add_handler(CommandHandler("experts", self._cmd_experts))
         self._app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self._on_message))
         self._app.add_handler(MessageHandler(filters.Document.ALL, self._on_document))
 
@@ -153,19 +159,25 @@ class SovereignEdgeBot:
 
     @_auth
     async def _cmd_start(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message is None:
+            return
         await update.message.reply_text(_WELCOME, parse_mode="HTML")
 
     @_auth
     async def _cmd_health(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-        await update.message.reply_text("🔍 Checking squads…")
+        if update.message is None:
+            return
+        await update.message.reply_text("🔍 Checking experts…")
         health = await self._orchestrator.health_check_all()
         lines = [f"{'✅' if ok else '❌'} <b>{name}</b>" for name, ok in sorted(health.items())]
-        text = "🏥 <b>Squad Health</b>\n\n" + "\n".join(lines) if lines else "No squads registered."
+        text = "🏥 <b>Expert Health</b>\n\n" + "\n".join(lines) if lines else "No experts registered."
         await update.message.reply_text(text, parse_mode="HTML")
 
     @_auth
     async def _cmd_stats(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
         """Today's LLM usage stats from TraceStore."""
+        if update.message is None:
+            return
         stats = self._orchestrator.get_daily_stats()
         if not stats:
             await update.message.reply_text("No stats recorded today yet.")
@@ -187,18 +199,22 @@ class SovereignEdgeBot:
 
     @_auth
     async def _cmd_status(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-        names = self._orchestrator.squad_names  # public property — no private access
+        if update.message is None:
+            return
+        names = self._orchestrator.expert_names  # public property — no private access
         text = (
             "⚡ <b>Sovereign Edge Status</b>\n\n"
-            f"Squads: {len(names)}\n"
+            f"Experts: {len(names)}\n"
             f"Registered: {', '.join(names) or 'none'}"
         )
         await update.message.reply_text(text, parse_mode="HTML")
 
     @_auth
-    async def _cmd_squads(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-        names = self._orchestrator.squad_names  # public property — no private access
-        text = "🤖 <b>Registered Squads</b>\n\n" + "\n".join(f"• {n}" for n in names)
+    async def _cmd_experts(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+        if update.message is None:
+            return
+        names = self._orchestrator.expert_names  # public property — no private access
+        text = "🤖 <b>Registered Experts</b>\n\n" + "\n".join(f"• {n}" for n in names)
         await update.message.reply_text(text, parse_mode="HTML")
 
     # ------------------------------------------------------------------ #
@@ -229,11 +245,11 @@ class SovereignEdgeBot:
 
         intent, confidence, routing = await self._router.aroute(user_text)
 
-        # Low-confidence general query — nudge the user toward a specific squad.
+        # Low-confidence general query — nudge the user toward a specific expert.
         # Still dispatches so they get an answer; the hint improves future routing.
         if intent.value == "GENERAL" and confidence <= LOW_CONFIDENCE_THRESHOLD:
             await update.message.reply_text(
-                "🤔 _Not sure which squad fits this — routing to intelligence._\n"
+                "🤔 _Not sure which expert fits this — routing to intelligence._\n"
                 "For better results try: Bible/faith · job search · AI research · content creation",
                 parse_mode="HTML",
             )
@@ -257,6 +273,9 @@ class SovereignEdgeBot:
         try:
             async for chunk in self._orchestrator.stream_dispatch(request):
                 buffer += chunk
+                if len(buffer) >= _MAX_BUFFER_CHARS:
+                    buffer = buffer[:_MAX_BUFFER_CHARS]
+                    break
                 # Edit at most every 800 ms to stay within Telegram's rate limit
                 if time.monotonic() - last_edit >= _STREAM_EDIT_INTERVAL and buffer:
                     try:
@@ -272,13 +291,21 @@ class SovereignEdgeBot:
 
         # Final edit — clean text, no cursor; overflow into extra messages if needed
         chunks_out = _split(_sanitize_markdown(buffer), 4000)
+        primary_sent = False
         try:
             await placeholder.edit_text(chunks_out[0], parse_mode="HTML")
+            primary_sent = True
         except Exception:
             try:
                 await placeholder.edit_text(chunks_out[0])
+                primary_sent = True
             except Exception:
-                logger.error("final_edit_failed", exc_info=True)
+                logger.error("final_edit_failed — falling back to new message", exc_info=True)
+        if not primary_sent:
+            try:
+                await update.message.reply_text(chunks_out[0], parse_mode="HTML")
+            except Exception:
+                await update.message.reply_text(chunks_out[0])
         for overflow in chunks_out[1:]:
             try:
                 await update.message.reply_text(overflow, parse_mode="HTML")
@@ -299,12 +326,12 @@ class SovereignEdgeBot:
 
     @_auth
     async def _on_document(self, update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle file uploads — extract text and route to the appropriate squad.
+        """Handle file uploads — extract text and route to the appropriate expert.
 
         Supported: PDF (pdfplumber), plain text (.txt / .md), DOCX (python-docx).
         Files are downloaded to a temp path, extracted, then deleted — never stored.
         The file name and type inform routing:
-          - resume.pdf / cv.pdf → CAREER squad
+          - resume.pdf / cv.pdf → CAREER expert
           - *.pdf with no signal   → INTELLIGENCE (treat as research paper)
           - *.txt / *.md          → route by content via IntentRouter
         """
@@ -317,6 +344,13 @@ class SovereignEdgeBot:
 
         fname = (doc.file_name or "").lower()
         chat_id = str(update.effective_chat.id)
+
+        if doc.file_size and doc.file_size > _MAX_FILE_BYTES:
+            await update.message.reply_text(
+                f"⚠️ File too large ({doc.file_size // (1024 * 1024)} MB). Maximum is 20 MB."
+            )
+            return
+
         await ctx.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
 
         # Download to temp file
@@ -369,7 +403,7 @@ class SovereignEdgeBot:
         )
 
         await update.message.reply_text(
-            f"📄 Processing _{doc.file_name}_ → *{intent.value.lower()}* squad…",
+            f"📄 Processing _{doc.file_name}_ → *{intent.value.lower()}* expert…",
             parse_mode="HTML",
         )
 
@@ -379,6 +413,9 @@ class SovereignEdgeBot:
         try:
             async for chunk in self._orchestrator.stream_dispatch(request):
                 buffer += chunk
+                if len(buffer) >= _MAX_BUFFER_CHARS:
+                    buffer = buffer[:_MAX_BUFFER_CHARS]
+                    break
                 if time.monotonic() - last_edit >= _STREAM_EDIT_INTERVAL and buffer:
                     try:
                         await placeholder.edit_text(
@@ -393,10 +430,21 @@ class SovereignEdgeBot:
 
         clean = _sanitize_markdown(buffer)
         chunks_out = _split(clean, 4000)
+        doc_primary_sent = False
         try:
             await placeholder.edit_text(chunks_out[0], parse_mode="HTML")
+            doc_primary_sent = True
         except Exception:
-            await placeholder.edit_text(chunks_out[0])
+            try:
+                await placeholder.edit_text(chunks_out[0])
+                doc_primary_sent = True
+            except Exception:
+                logger.error("doc_final_edit_failed — falling back to new message", exc_info=True)
+        if not doc_primary_sent:
+            try:
+                await update.message.reply_text(chunks_out[0], parse_mode="HTML")
+            except Exception:
+                await update.message.reply_text(chunks_out[0])
         for overflow in chunks_out[1:]:
             try:
                 await update.message.reply_text(overflow, parse_mode="HTML")
@@ -563,15 +611,15 @@ async def _run() -> None:
     setup_logging(debug=get_settings().debug_mode)
     log_startup_warnings()
 
-    from career.squad import CareerSquad
-    from creative.squad import CreativeSquad
-    from intelligence.squad import IntelligenceSquad
+    from career.expert import CareerExpert
+    from creative.expert import CreativeExpert
+    from intelligence.expert import IntelligenceExpert
     from orchestrator.main import Orchestrator
-    from spiritual.squad import SpiritualSquad
+    from spiritual.expert import SpiritualExpert
 
     orch = Orchestrator(use_director=True)
-    for squad in (SpiritualSquad(), CareerSquad(), IntelligenceSquad(), CreativeSquad()):
-        orch.register(squad)
+    for expert in (SpiritualExpert(), CareerExpert(), IntelligenceExpert(), CreativeExpert()):
+        orch.register(expert)
 
     bot = SovereignEdgeBot(orch)
 

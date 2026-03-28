@@ -44,3 +44,15 @@ def _reset() -> None:
 
         arxiv._seen_ids = set()
         arxiv._seen_date = date.today()
+
+    # Semantic cache singleton — prevents cache hits bleeding between tests
+    if "memory.semantic_cache" in sys.modules:
+        import memory.semantic_cache as sc  # type: ignore[import]
+
+        sc._instance = None
+
+    # Episodic memory singleton — avoids Mem0 state leaking between tests
+    if "memory.episodic" in sys.modules:
+        import memory.episodic as ep  # type: ignore[import]
+
+        ep._episodic_instance = None

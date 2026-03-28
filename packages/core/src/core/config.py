@@ -6,6 +6,7 @@ import logging
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
@@ -26,17 +27,17 @@ class Settings(BaseSettings):
     embedding_model: str = "qwen3-embedding:0.6b"
     local_llm_model: str = "qwen3:0.6b"
 
-    # Cloud API Keys (loaded from SOPS-decrypted env vars)
-    groq_api_key: str = ""
-    google_api_key: str = ""
-    cerebras_api_key: str = ""
-    mistral_api_key: str = ""
-    telegram_bot_token: str = ""
+    # Cloud API Keys (loaded from SOPS-decrypted env vars) — SecretStr prevents accidental logging
+    groq_api_key: SecretStr = SecretStr("")
+    google_api_key: SecretStr = SecretStr("")
+    cerebras_api_key: SecretStr = SecretStr("")
+    mistral_api_key: SecretStr = SecretStr("")
+    telegram_bot_token: SecretStr = SecretStr("")
     telegram_owner_chat_id: str = ""
-    discord_bot_token: str = ""
+    discord_bot_token: SecretStr = SecretStr("")
     discord_owner_user_id: str = ""
-    alpha_vantage_key: str = ""
-    jina_api_key: str = ""
+    alpha_vantage_key: SecretStr = SecretStr("")
+    jina_api_key: SecretStr = SecretStr("")
 
     # Cloud API Rate Limits (requests per minute) — tune per deployment
     groq_rpm: int = 30
@@ -44,7 +45,7 @@ class Settings(BaseSettings):
     cerebras_rpm: int = 30
     mistral_rpm: int = 2
 
-    # Career Squad — override to target a different location/role
+    # Career Expert — override to target a different location/role
     career_target_location: str = "your city or region"
     career_target_roles: str = "ML Engineer, AI Engineer, LLM Engineer"
     career_differentiators: str = ""  # comma-separated; empty = generic coaching
@@ -73,13 +74,13 @@ def log_startup_warnings() -> None:
     s = get_settings()
 
     cloud_keys = {
-        "SE_GROQ_API_KEY": s.groq_api_key,
-        "SE_GOOGLE_API_KEY": s.google_api_key,
-        "SE_CEREBRAS_API_KEY": s.cerebras_api_key,
-        "SE_MISTRAL_API_KEY": s.mistral_api_key,
+        "SE_GROQ_API_KEY": s.groq_api_key.get_secret_value(),
+        "SE_GOOGLE_API_KEY": s.google_api_key.get_secret_value(),
+        "SE_CEREBRAS_API_KEY": s.cerebras_api_key.get_secret_value(),
+        "SE_MISTRAL_API_KEY": s.mistral_api_key.get_secret_value(),
     }
     required_keys = {
-        "SE_TELEGRAM_BOT_TOKEN": s.telegram_bot_token,
+        "SE_TELEGRAM_BOT_TOKEN": s.telegram_bot_token.get_secret_value(),
         "SE_TELEGRAM_OWNER_CHAT_ID": s.telegram_owner_chat_id,
     }
 
@@ -105,7 +106,7 @@ def log_startup_warnings() -> None:
             s.local_llm_model,
         )
 
-    if not s.jina_api_key:
+    if not s.jina_api_key.get_secret_value():
         logger.info(
             "startup_no_jina_key — web search limited to ~200 RPD free tier; "
             "set SE_JINA_API_KEY for unlimited"

@@ -9,6 +9,7 @@ dependencies = [
     "sovereign-edge-observability",
     "sovereign-edge-search",
     "langgraph>=1.0,<2.0",
+    "flashrank>=0.2,<1.0",
 ]
 
 [tool.uv.sources]

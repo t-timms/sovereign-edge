@@ -29,19 +29,6 @@ from core.types import RoutingDecision
 litellm.set_verbose = False  # type: ignore[attr-defined]
 litellm.suppress_debug_info = True  # type: ignore[attr-defined]
 
-# LiteLLM reads API keys from standard env vars (GROQ_API_KEY etc.), but this
-# service loads secrets with the SE_ prefix. Bridge them once at module load.
-_s = get_settings()
-_KEY_MAP: dict[str, str] = {
-    "GROQ_API_KEY": _s.groq_api_key,
-    "GOOGLE_API_KEY": _s.google_api_key,
-    "CEREBRAS_API_KEY": _s.cerebras_api_key,
-    "MISTRAL_API_KEY": _s.mistral_api_key,
-}
-for _env_var, _key_val in _KEY_MAP.items():
-    if _key_val:
-        os.environ[_env_var] = _key_val
-
 logger = logging.getLogger(__name__)
 
 _MAX_RETRIES = 3
@@ -125,25 +112,29 @@ class TokenBucket:
 
     Refills at rate = rpm / 60 tokens per second.
     Max capacity = rpm tokens (1 minute burst).
+    acquire() is async to safely serialize concurrent coroutine access.
     """
 
     rpm: int
     _tokens: float = field(init=False)
     _last_refill: float = field(default_factory=time.monotonic, init=False)
+    _lock: asyncio.Lock = field(init=False)
 
     def __post_init__(self) -> None:
         self._tokens = float(self.rpm)
+        self._lock = asyncio.Lock()
 
-    def acquire(self) -> bool:
+    async def acquire(self) -> bool:
         """Return True if a request slot is available, False if rate-limited."""
-        now = time.monotonic()
-        elapsed = now - self._last_refill
-        self._tokens = min(float(self.rpm), self._tokens + elapsed * (self.rpm / 60.0))
-        self._last_refill = now
-        if self._tokens >= 1.0:
-            self._tokens -= 1.0
-            return True
-        return False
+        async with self._lock:
+            now = time.monotonic()
+            elapsed = now - self._last_refill
+            self._tokens = min(float(self.rpm), self._tokens + elapsed * (self.rpm / 60.0))
+            self._last_refill = now
+            if self._tokens >= 1.0:
+                self._tokens -= 1.0
+                return True
+            return False
 
 
 @dataclass
@@ -188,6 +179,17 @@ class LLMGateway:
         self._buckets: dict[str, TokenBucket] = {
             p.model: TokenBucket(rpm=p.rpm) for p in self._providers
         }
+        # Bridge SE_-prefixed keys to the names LiteLLM expects — done here (not at
+        # module level) so tests can patch get_settings() before gateway init.
+        key_map: dict[str, str] = {
+            "GROQ_API_KEY": self.settings.groq_api_key.get_secret_value(),
+            "GOOGLE_API_KEY": self.settings.google_api_key.get_secret_value(),
+            "CEREBRAS_API_KEY": self.settings.cerebras_api_key.get_secret_value(),
+            "MISTRAL_API_KEY": self.settings.mistral_api_key.get_secret_value(),
+        }
+        for env_var, key_val in key_map.items():
+            if key_val:
+                os.environ[env_var] = key_val
 
     async def complete(
         self,
@@ -195,7 +197,7 @@ class LLMGateway:
         routing: RoutingDecision = RoutingDecision.CLOUD,
         max_tokens: int = 2048,
         temperature: float = 0.7,
-        squad: str = "general",
+        expert: str = "general",
     ) -> dict[str, object]:
         """
         Send a completion request through the fallback chain.
@@ -203,7 +205,7 @@ class LLMGateway:
         Returns dict with keys: content, model, tokens_in, tokens_out, latency_ms, cost_usd
         """
         if routing == RoutingDecision.LOCAL:
-            return await self._call_local(messages, max_tokens, temperature, squad)
+            return await self._call_local(messages, max_tokens, temperature, expert)
 
         # Simple conversational queries go to Mistral first — it has 33M TPD free
         # and this preserves Groq/Gemini quota for complex research and career work.
@@ -217,16 +219,16 @@ class LLMGateway:
                 logger.debug("provider_daily_limit_reached model=%s", provider.model)
                 continue
 
-            if not self._buckets[provider.model].acquire():
+            if not await self._buckets[provider.model].acquire():
                 logger.debug("provider_rpm_limited model=%s", provider.model)
                 continue
 
-            result = await self._call_with_retry(provider, messages, max_tokens, temperature, squad)
+            result = await self._call_with_retry(provider, messages, max_tokens, temperature, expert)
             if result is not None:
                 return result
 
         logger.warning("all_cloud_providers_failed falling_back=local")
-        return await self._call_local(messages, max_tokens, temperature, squad)
+        return await self._call_local(messages, max_tokens, temperature, expert)
 
     async def stream_complete(
         self,
@@ -234,7 +236,7 @@ class LLMGateway:
         routing: RoutingDecision = RoutingDecision.CLOUD,
         max_tokens: int = 2048,
         temperature: float = 0.7,
-        squad: str = "general",
+        expert: str = "general",
     ) -> AsyncGenerator[str, None]:
         """Stream completion chunks through the fallback chain.
 
@@ -244,7 +246,7 @@ class LLMGateway:
         """
 
         if routing == RoutingDecision.LOCAL:
-            result = await self._call_local(messages, max_tokens, temperature, squad)
+            result = await self._call_local(messages, max_tokens, temperature, expert)
             yield result["content"]
             return
 
@@ -256,7 +258,7 @@ class LLMGateway:
         for provider in sorted(self._providers, key=sort_key):
             if self.tracker.get(provider.model) >= provider.tpd:
                 continue
-            if not self._buckets[provider.model].acquire():
+            if not await self._buckets[provider.model].acquire():
                 continue
 
             try:
@@ -279,8 +281,8 @@ class LLMGateway:
 
                 self.tracker.add(provider.model, tokens_in + tokens_out)
                 logger.info(
-                    "stream_response model=%s squad=%s tokens_in=%d tokens_out=%d",
-                    provider.model, squad, tokens_in, tokens_out,
+                    "stream_response model=%s expert=%s tokens_in=%d tokens_out=%d",
+                    provider.model, expert, tokens_in, tokens_out,
                 )
                 return  # success — do not try next provider
 
@@ -294,7 +296,7 @@ class LLMGateway:
                 logger.warning("stream_unexpected_error model=%s", provider.model, exc_info=True)
 
         logger.warning("all_stream_providers_failed falling_back=local")
-        result = await self._call_local(messages, max_tokens, temperature, squad)
+        result = await self._call_local(messages, max_tokens, temperature, expert)
         yield result["content"]
 
     async def _call_with_retry(
@@ -303,7 +305,7 @@ class LLMGateway:
         messages: list[dict[str, str]],
         max_tokens: int,
         temperature: float,
-        squad: str,
+        expert: str,
     ) -> dict[str, object] | None:
         """Attempt provider with exponential backoff. Returns None to try next provider."""
         for attempt in range(_MAX_RETRIES):
@@ -324,15 +326,16 @@ class LLMGateway:
 
                 content = response.choices[0].message.content or ""
                 try:
-                    cost_usd = float(litellm.completion_cost(completion_response=response))  # type: ignore[attr-defined]
+                    raw_cost = litellm.completion_cost(completion_response=response)  # type: ignore[attr-defined]
+                    cost_usd = float(raw_cost) if raw_cost is not None else 0.0
                 except Exception:
                     cost_usd = 0.0
 
                 logger.info(
-                    "llm_response model=%s squad=%s tokens_in=%d tokens_out=%d "
+                    "llm_response model=%s expert=%s tokens_in=%d tokens_out=%d "
                     "latency_ms=%.1f cost_usd=%.6f",
                     provider.model,
-                    squad,
+                    expert,
                     tokens_in,
                     tokens_out,
                     elapsed,
@@ -407,7 +410,7 @@ class LLMGateway:
         messages: list[dict[str, str]],
         max_tokens: int,
         temperature: float,
-        squad: str,
+        expert: str,
     ) -> dict[str, object]:
         """Call local Ollama model as last resort."""
         start = time.monotonic()
@@ -425,13 +428,14 @@ class LLMGateway:
             tokens_in = response.usage.prompt_tokens if response.usage else 0
             tokens_out = response.usage.completion_tokens if response.usage else 0
             try:
-                cost_usd = float(litellm.completion_cost(completion_response=response))  # type: ignore[attr-defined]
+                raw_cost = litellm.completion_cost(completion_response=response)  # type: ignore[attr-defined]
+                cost_usd = float(raw_cost) if raw_cost is not None else 0.0
             except Exception:
                 cost_usd = 0.0
 
             logger.info(
-                "local_model_response squad=%s latency_ms=%.1f cost_usd=%.6f",
-                squad,
+                "local_model_response expert=%s latency_ms=%.1f cost_usd=%.6f",
+                expert,
                 elapsed,
                 cost_usd,
             )
@@ -446,7 +450,7 @@ class LLMGateway:
 
         except Exception:
             elapsed_ms = (time.monotonic() - start) * 1000
-            logger.error("local_model_failed squad=%s", squad, exc_info=True)
+            logger.error("local_model_failed expert=%s", expert, exc_info=True)
             return {
                 "content": (
                     "⚠️ All inference providers are currently unavailable. Please try again shortly."

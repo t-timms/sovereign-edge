@@ -1,22 +1,22 @@
 """Sovereign Edge core types and configuration."""
 
 from core.config import Settings, get_settings
-from core.squad import BaseSquad
+from core.expert import BaseExpert
 from core.types import (
     Intent,
     RoutingDecision,
-    SquadName,
+    ExpertName,
     TaskPriority,
     TaskRequest,
     TaskResult,
 )
 
 __all__ = [
-    "BaseSquad",
+    "BaseExpert",
     "Intent",
     "RoutingDecision",
     "Settings",
-    "SquadName",
+    "ExpertName",
     "TaskPriority",
     "TaskRequest",
     "TaskResult",

@@ -1,4 +1,4 @@
-"""Free web grounding helpers for Sovereign Edge squads."""
+"""Free web grounding helpers for Sovereign Edge experts."""
 
 from __future__ import annotations
 

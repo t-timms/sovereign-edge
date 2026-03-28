@@ -1,9 +1,9 @@
 """
 Pydantic output schemas for structured LLM responses.
 
-These schemas define the expected structure for squad outputs when structured
-extraction is required. All squads can return free-form text (content field),
-while specialized squads can populate additional typed fields.
+These schemas define the expected structure for expert outputs when structured
+extraction is required. All experts can return free-form text (content field),
+while specialized experts can populate additional typed fields.
 
 Usage with instructor (optional dependency in sovereign-edge-llm):
     from instructor import from_litellm
@@ -19,16 +19,16 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
-class SquadResponse(BaseModel):
-    """Base structured response — all squads can return this."""
+class ExpertResponse(BaseModel):
+    """Base structured response — all experts can return this."""
 
     content: str = Field(description="Primary response text, formatted for Telegram Markdown.")
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     sources: list[str] = Field(default_factory=list)
 
 
-class SpiritualResponse(SquadResponse):
-    """Spiritual squad: devotional with verse reference and prayer."""
+class SpiritualResponse(ExpertResponse):
+    """Spiritual expert: devotional with verse reference and prayer."""
 
     verse_ref: str = Field(
         default="",
@@ -40,8 +40,8 @@ class SpiritualResponse(SquadResponse):
     )
 
 
-class CareerResponse(SquadResponse):
-    """Career squad: job listings and coaching advice."""
+class CareerResponse(ExpertResponse):
+    """Career expert: job listings and coaching advice."""
 
     job_count: int = Field(
         default=0,
@@ -53,8 +53,8 @@ class CareerResponse(SquadResponse):
     )
 
 
-class IntelligenceResponse(SquadResponse):
-    """Intelligence squad: research synthesis."""
+class IntelligenceResponse(ExpertResponse):
+    """Intelligence expert: research synthesis."""
 
     paper_count: int = Field(
         default=0,
@@ -66,8 +66,8 @@ class IntelligenceResponse(SquadResponse):
     )
 
 
-class CreativeResponse(SquadResponse):
-    """Creative squad: content output with format metadata."""
+class CreativeResponse(ExpertResponse):
+    """Creative expert: content output with format metadata."""
 
     format_used: str = Field(
         default="",

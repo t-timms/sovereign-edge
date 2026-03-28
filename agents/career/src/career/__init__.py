@@ -1,5 +1,5 @@
-"""Career squad — job search, resume, interview prep, market intelligence."""
+"""Career expert — job search, resume, interview prep, market intelligence."""
 
-from career.squad import CareerSquad
+from career.expert import CareerExpert
 
-__all__ = ["CareerSquad"]
+__all__ = ["CareerExpert"]

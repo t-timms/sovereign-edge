@@ -6,10 +6,10 @@ returns responses. Only the owner Discord user ID is authorised.
 
 Commands (slash commands):
   /start   — greeting
-  /health  — squad health status
+  /health  — expert health status
   /stats   — today's usage and cost stats (TraceStore)
-  /status  — current squad + routing info
-  /squads  — list registered squads
+  /status  — current expert + routing info
+  /experts  — list registered experts
 
 # Requires in Settings:
 #   discord_bot_token: str = ""
@@ -40,7 +40,7 @@ logger = get_logger(__name__, component="discord")
 
 _WELCOME = (
     "👁️ **Sovereign Edge online.**\n\n"
-    "Send any message and I'll route it to the right squad.\n"
+    "Send any message and I'll route it to the right expert.\n"
     "Use /health to check system status.\n"
     "Use /stats to see today's usage."
 )
@@ -86,7 +86,7 @@ class SovereignEdgeDiscordBot(discord.Client):
     # ------------------------------------------------------------------ #
 
     async def start(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
-        token = self._settings.discord_bot_token
+        token = self._settings.discord_bot_token.get_secret_value()
         if not token:
             logger.warning("discord_token_missing — bot disabled")
             return
@@ -188,11 +188,11 @@ class SovereignEdgeDiscordBot(discord.Client):
 
         intent, confidence, routing = await self._router.aroute(user_text)
 
-        # Low-confidence general query — nudge the user toward a specific squad.
+        # Low-confidence general query — nudge the user toward a specific expert.
         # Still dispatches so they get an answer; the hint improves future routing.
         if intent.value == "GENERAL" and confidence <= LOW_CONFIDENCE_THRESHOLD:
             await message.reply(
-                "🤔 *Not sure which squad fits this — routing to intelligence.*\n"
+                "🤔 *Not sure which expert fits this — routing to intelligence.*\n"
                 "For better results try: Bible/faith · job search · AI research · content creation"
             )
 
@@ -215,7 +215,8 @@ class SovereignEdgeDiscordBot(discord.Client):
             reply = "⚠️ Something went wrong. Please try again."
         finally:
             stop_typing.set()
-            typing_task.cancel()
+            if not typing_task.done():
+                typing_task.cancel()
             try:
                 await asyncio.wait_for(typing_task, timeout=1.0)
             except (TimeoutError, asyncio.CancelledError):
@@ -256,7 +257,7 @@ class SovereignEdgeDiscordBot(discord.Client):
                 return
             await interaction.response.send_message(_WELCOME)
 
-        @self.tree.command(name="health", description="Check squad health status")
+        @self.tree.command(name="health", description="Check expert health status")
         async def cmd_health(interaction: discord.Interaction) -> None:
             if not self._is_owner(interaction.user):
                 await interaction.response.send_message("⛔ Unauthorised.", ephemeral=True)
@@ -266,7 +267,7 @@ class SovereignEdgeDiscordBot(discord.Client):
             lines = [
                 f"{'✅' if ok else '❌'} **{name}**" for name, ok in sorted(health.items())
             ]
-            text = "🏥 **Squad Health**\n\n" + "\n".join(lines) if lines else "No squads registered."
+            text = "🏥 **Expert Health**\n\n" + "\n".join(lines) if lines else "No experts registered."
             await interaction.followup.send(text)
 
         @self.tree.command(name="stats", description="Today's usage and cost stats")
@@ -292,26 +293,26 @@ class SovereignEdgeDiscordBot(discord.Client):
             )
             await interaction.response.send_message(text)
 
-        @self.tree.command(name="status", description="Current squad and routing info")
+        @self.tree.command(name="status", description="Current expert and routing info")
         async def cmd_status(interaction: discord.Interaction) -> None:
             if not self._is_owner(interaction.user):
                 await interaction.response.send_message("⛔ Unauthorised.", ephemeral=True)
                 return
-            names = self._orchestrator.squad_names
+            names = self._orchestrator.expert_names
             text = (
                 "⚡ **Sovereign Edge Status**\n\n"
-                f"Squads: {len(names)}\n"
+                f"Experts: {len(names)}\n"
                 f"Registered: {', '.join(names) or 'none'}"
             )
             await interaction.response.send_message(text)
 
-        @self.tree.command(name="squads", description="List registered squads")
-        async def cmd_squads(interaction: discord.Interaction) -> None:
+        @self.tree.command(name="experts", description="List registered experts")
+        async def cmd_experts(interaction: discord.Interaction) -> None:
             if not self._is_owner(interaction.user):
                 await interaction.response.send_message("⛔ Unauthorised.", ephemeral=True)
                 return
-            names = self._orchestrator.squad_names
-            text = "🤖 **Registered Squads**\n\n" + "\n".join(f"• {n}" for n in names)
+            names = self._orchestrator.expert_names
+            text = "🤖 **Registered Experts**\n\n" + "\n".join(f"• {n}" for n in names)
             await interaction.response.send_message(text)
 
 
@@ -365,15 +366,15 @@ async def _run() -> None:
     setup_logging(debug=get_settings().debug_mode)
     log_startup_warnings()
 
-    from career.squad import CareerSquad
-    from creative.squad import CreativeSquad
-    from intelligence.squad import IntelligenceSquad
+    from career.expert import CareerExpert
+    from creative.expert import CreativeExpert
+    from intelligence.expert import IntelligenceExpert
     from orchestrator.main import Orchestrator
-    from spiritual.squad import SpiritualSquad
+    from spiritual.expert import SpiritualExpert
 
     orch = Orchestrator()
-    for squad in (SpiritualSquad(), CareerSquad(), IntelligenceSquad(), CreativeSquad()):
-        orch.register(squad)
+    for expert in (SpiritualExpert(), CareerExpert(), IntelligenceExpert(), CreativeExpert()):
+        orch.register(expert)
 
     bot = SovereignEdgeDiscordBot(orch)
 

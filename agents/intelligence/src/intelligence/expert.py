@@ -1,5 +1,5 @@
 """
-Intelligence squad — research synthesis, AI/ML trend monitoring, news digest.
+Intelligence expert — research synthesis, AI/ML trend monitoring, news digest.
 
 Delegates to ``intelligence_subgraph`` (LangGraph) for the full pipeline:
   arxiv_fetcher + hf_fetcher (parallel) → ranker → synthesizer
@@ -12,8 +12,8 @@ from __future__ import annotations
 import asyncio
 import time
 
-from core.squad import BaseSquad
-from core.types import RoutingDecision, SquadName, TaskRequest, TaskResult
+from core.expert import BaseExpert
+from core.types import RoutingDecision, ExpertName, TaskRequest, TaskResult
 from observability.logging import get_logger
 
 from intelligence.subgraph import (
@@ -26,12 +26,12 @@ from intelligence.subgraph import (
 logger = get_logger(__name__, component="intelligence")
 
 
-class IntelligenceSquad(BaseSquad):
+class IntelligenceExpert(BaseExpert):
     """Research synthesis and trend monitoring grounded with live papers."""
 
     @property
     def name(self) -> str:
-        return SquadName.INTELLIGENCE
+        return ExpertName.INTELLIGENCE
 
     async def process(self, task: TaskRequest) -> TaskResult:
         t0 = time.monotonic()
@@ -66,7 +66,7 @@ class IntelligenceSquad(BaseSquad):
 
         return TaskResult(
             task_id=task.task_id,
-            squad=SquadName.INTELLIGENCE,
+            expert=ExpertName.INTELLIGENCE,
             content=result["response"],
             model_used=result["model_used"],
             tokens_in=result["tokens_in"],
@@ -95,8 +95,10 @@ class IntelligenceSquad(BaseSquad):
                 return_exceptions=True,
             )
             if isinstance(arxiv_papers, Exception):
+                logger.warning("arxiv_fetch_failed", error=str(arxiv_papers))
                 arxiv_papers = []
             if isinstance(hf_papers, Exception):
+                logger.warning("hf_fetch_failed", error=str(hf_papers))
                 hf_papers = []
             all_parts: list[str] = []
             if arxiv_papers:
@@ -124,19 +126,19 @@ class IntelligenceSquad(BaseSquad):
         ]
 
         result = await gateway.complete(
-            messages=messages, max_tokens=2048, routing=task.routing, squad=self.name,
+            messages=messages, max_tokens=2048, routing=task.routing, expert=self.name,
         )
 
         brief = BriefOutput(content=result["content"])
         if not brief.is_valid:
             logger.warning(
-                "brief_quality_low squad=intelligence links=%d words=%d",
+                "brief_quality_low expert=intelligence links=%d words=%d",
                 brief.link_count, brief.word_count,
             )
 
         return TaskResult(
             task_id=task.task_id,
-            squad=SquadName.INTELLIGENCE,
+            expert=ExpertName.INTELLIGENCE,
             content=brief.content,
             model_used=result["model"],
             tokens_in=result["tokens_in"],
@@ -173,8 +175,10 @@ class IntelligenceSquad(BaseSquad):
             fetch_recent(max_results=5), fetch_daily_papers(), return_exceptions=True,
         )
         if isinstance(arxiv_papers, Exception):
+            logger.warning("morning_brief_arxiv_failed", error=str(arxiv_papers))
             arxiv_papers = []
         if isinstance(hf_papers, Exception):
+            logger.warning("morning_brief_hf_failed", error=str(hf_papers))
             hf_papers = []
 
         all_parts: list[str] = []
@@ -194,7 +198,7 @@ class IntelligenceSquad(BaseSquad):
             ],
             max_tokens=300,
             routing=RoutingDecision.CLOUD,
-            squad=self.name,
+            expert=self.name,
         )
         brief = BriefOutput(content=result["content"])
         if not brief.is_valid:
@@ -220,8 +224,10 @@ class IntelligenceSquad(BaseSquad):
                 fetch_recent(max_results=5), fetch_daily_papers(), return_exceptions=True,
             )
             if isinstance(arxiv_papers, Exception):
+                logger.warning("stream_arxiv_failed", error=str(arxiv_papers))
                 arxiv_papers = []
             if isinstance(hf_papers, Exception):
+                logger.warning("stream_hf_failed", error=str(hf_papers))
                 hf_papers = []
             all_parts: list[str] = []
             if arxiv_papers:
@@ -248,7 +254,7 @@ class IntelligenceSquad(BaseSquad):
         ]
 
         async for chunk in gateway.stream_complete(
-            messages=messages, max_tokens=2048, routing=task.routing, squad=self.name,
+            messages=messages, max_tokens=2048, routing=task.routing, expert=self.name,
         ):
             yield chunk
 

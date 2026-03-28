@@ -8,7 +8,7 @@ from uuid import UUID
 from core.types import (
     Intent,
     RoutingDecision,
-    SquadName,
+    ExpertName,
     TaskPriority,
     TaskRequest,
     TaskResult,
@@ -44,9 +44,9 @@ class TestTaskRequest:
         req = TaskRequest(content="x", intent=Intent.GENERAL, routing=RoutingDecision.CLOUD)
         assert req.priority == TaskPriority.NORMAL
 
-    def test_default_squad_is_general(self) -> None:
+    def test_default_expert_is_general(self) -> None:
         req = TaskRequest(content="x", intent=Intent.GENERAL, routing=RoutingDecision.CLOUD)
-        assert req.squad == SquadName.GENERAL
+        assert req.expert == ExpertName.GENERAL
 
     def test_default_context_is_empty_dict(self) -> None:
         req = TaskRequest(content="x", intent=Intent.GENERAL, routing=RoutingDecision.CLOUD)
@@ -70,7 +70,7 @@ class TestTaskResult:
 
         result = TaskResult(
             task_id=uuid4(),
-            squad=SquadName.INTELLIGENCE,
+            expert=ExpertName.INTELLIGENCE,
             content="ok",
             model_used="groq/llama3",
         )
@@ -81,7 +81,7 @@ class TestTaskResult:
 
         result = TaskResult(
             task_id=uuid4(),
-            squad=SquadName.CAREER,
+            expert=ExpertName.CAREER,
             content="ok",
             model_used="groq/llama3",
         )
@@ -92,7 +92,7 @@ class TestTaskResult:
 
         result = TaskResult(
             task_id=uuid4(),
-            squad=SquadName.SPIRITUAL,
+            expert=ExpertName.SPIRITUAL,
             content="ok",
             model_used="none",
         )
@@ -106,7 +106,7 @@ class TestTaskResult:
 
         result = TaskResult(
             task_id=uuid4(),
-            squad=SquadName.GENERAL,
+            expert=ExpertName.GENERAL,
             content="ok",
             model_used="none",
         )

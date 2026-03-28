@@ -1,7 +1,7 @@
 """
 SQLite trace store — queryable log of all LLM interactions.
 
-Schema designed for cost tracking, latency analysis, and squad performance monitoring.
+Schema designed for cost tracking, latency analysis, and expert performance monitoring.
 WAL mode enabled for concurrent read/write without blocking.
 ~10MB storage per 10K traces.
 """
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+import threading
 from datetime import UTC, datetime
 
 from core.config import get_settings
@@ -31,68 +32,72 @@ class TraceStore:
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA synchronous=NORMAL")  # safe + fast with WAL
         self.conn.execute("PRAGMA cache_size=-8000")  # 8MB page cache
+        # Serialize writes — SQLite WAL allows concurrent reads but not concurrent writes
+        self._lock = threading.Lock()
         self._create_tables()
         logger.info("trace_store_initialized path=%s", db_path)
 
     def _create_tables(self) -> None:
-        self.conn.executescript("""
-            CREATE TABLE IF NOT EXISTS traces (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                task_id TEXT NOT NULL,
-                timestamp TEXT NOT NULL,
-                squad TEXT NOT NULL,
-                model TEXT NOT NULL,
-                tokens_in INTEGER DEFAULT 0,
-                tokens_out INTEGER DEFAULT 0,
-                latency_ms REAL DEFAULT 0.0,
-                cost_usd REAL DEFAULT 0.0,
-                cached INTEGER DEFAULT 0,
-                routing TEXT DEFAULT 'CLOUD',
-                status TEXT DEFAULT 'success',
-                error_message TEXT DEFAULT ''
-            );
+        with self._lock:
+            self.conn.executescript("""
+                CREATE TABLE IF NOT EXISTS traces (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id TEXT NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    expert TEXT NOT NULL,
+                    model TEXT NOT NULL,
+                    tokens_in INTEGER DEFAULT 0,
+                    tokens_out INTEGER DEFAULT 0,
+                    latency_ms REAL DEFAULT 0.0,
+                    cost_usd REAL DEFAULT 0.0,
+                    cached INTEGER DEFAULT 0,
+                    routing TEXT DEFAULT 'CLOUD',
+                    status TEXT DEFAULT 'success',
+                    error_message TEXT DEFAULT ''
+                );
 
-            CREATE INDEX IF NOT EXISTS idx_traces_squad ON traces(squad);
-            CREATE INDEX IF NOT EXISTS idx_traces_timestamp ON traces(timestamp);
-            CREATE INDEX IF NOT EXISTS idx_traces_model ON traces(model);
-            CREATE INDEX IF NOT EXISTS idx_traces_status ON traces(status);
+                CREATE INDEX IF NOT EXISTS idx_traces_expert ON traces(expert);
+                CREATE INDEX IF NOT EXISTS idx_traces_timestamp ON traces(timestamp);
+                CREATE INDEX IF NOT EXISTS idx_traces_model ON traces(model);
+                CREATE INDEX IF NOT EXISTS idx_traces_status ON traces(status);
 
-            CREATE TABLE IF NOT EXISTS daily_summary (
-                date TEXT PRIMARY KEY,
-                total_requests INTEGER DEFAULT 0,
-                total_tokens_in INTEGER DEFAULT 0,
-                total_tokens_out INTEGER DEFAULT 0,
-                total_cost_usd REAL DEFAULT 0.0,
-                cache_hits INTEGER DEFAULT 0,
-                errors INTEGER DEFAULT 0
-            );
-        """)
-        self.conn.commit()
+                CREATE TABLE IF NOT EXISTS daily_summary (
+                    date TEXT PRIMARY KEY,
+                    total_requests INTEGER DEFAULT 0,
+                    total_tokens_in INTEGER DEFAULT 0,
+                    total_tokens_out INTEGER DEFAULT 0,
+                    total_cost_usd REAL DEFAULT 0.0,
+                    cache_hits INTEGER DEFAULT 0,
+                    errors INTEGER DEFAULT 0
+                );
+            """)
+            self.conn.commit()
 
     def record(self, result: TaskResult, status: str = "success", error: str = "") -> None:
         """Record a completed task result. Safe to call from async context (fast SQLite write)."""
         try:
-            self.conn.execute(
-                """INSERT INTO traces
-                   (task_id, timestamp, squad, model, tokens_in, tokens_out,
-                    latency_ms, cost_usd, cached, routing, status, error_message)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (
-                    str(result.task_id),
-                    datetime.now(UTC).isoformat(),
-                    result.squad,
-                    result.model_used,
-                    result.tokens_in,
-                    result.tokens_out,
-                    result.latency_ms,
-                    result.cost_usd,
-                    1 if result.cached else 0,
-                    result.routing,
-                    status,
-                    error,
-                ),
-            )
-            self.conn.commit()
+            with self._lock:
+                self.conn.execute(
+                    """INSERT INTO traces
+                       (task_id, timestamp, expert, model, tokens_in, tokens_out,
+                        latency_ms, cost_usd, cached, routing, status, error_message)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        str(result.task_id),
+                        datetime.now(UTC).isoformat(),
+                        result.expert,
+                        result.model_used,
+                        result.tokens_in,
+                        result.tokens_out,
+                        result.latency_ms,
+                        result.cost_usd,
+                        1 if result.cached else 0,
+                        result.routing,
+                        status,
+                        error,
+                    ),
+                )
+                self.conn.commit()
         except sqlite3.Error:
             logger.error("trace_record_failed task_id=%s", result.task_id, exc_info=True)
 
@@ -118,8 +123,8 @@ class TraceStore:
 
         return dict(row) if row else {}
 
-    def get_squad_stats(self, squad: str, days: int = 7) -> list[dict]:
-        """Get per-squad stats for the last N days."""
+    def get_expert_stats(self, expert: str, days: int = 7) -> list[dict]:
+        """Get per-expert stats for the last N days."""
         rows = self.conn.execute(
             """SELECT date(timestamp) as date,
                       COUNT(*) as requests,
@@ -127,11 +132,11 @@ class TraceStore:
                       COALESCE(AVG(latency_ms), 0) as avg_latency_ms,
                       COALESCE(SUM(CASE WHEN status='error' THEN 1 ELSE 0 END), 0) as errors
                FROM traces
-               WHERE squad = ?
+               WHERE expert = ?
                  AND timestamp >= datetime('now', ?)
                GROUP BY date(timestamp)
                ORDER BY date(timestamp)""",
-            (squad, f"-{days} days"),
+            (expert, f"-{days} days"),
         ).fetchall()
 
         return [dict(r) for r in rows]

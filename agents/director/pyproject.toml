@@ -8,7 +8,7 @@ dependencies = [
     "sovereign-edge-memory",
     "sovereign-edge-observability",
     "langgraph>=1.0,<2.0",
-    "langchain-core>=0.3,<1.0",
+    "pydantic>=2.0,<3.0",
 ]
 
 [tool.uv.sources]

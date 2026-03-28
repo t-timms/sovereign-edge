@@ -1,10 +1,10 @@
-# Squads
+# Experts
 
-Each squad is a specialized AI agent with its own system prompt, live data sources, and response format. All squads share the same LLM gateway and write to the same trace store.
+Each expert is a specialized AI agent with its own system prompt, live data sources, and response format. All experts share the same LLM gateway and write to the same trace store.
 
 ---
 
-## Intelligence Squad
+## Intelligence Expert
 
 **Intent:** `INTELLIGENCE`
 
@@ -43,7 +43,7 @@ Why it matters for practitioners.
 
 ---
 
-## Career Squad
+## Career Expert
 
 **Intent:** `CAREER`
 
@@ -66,7 +66,7 @@ A DFW-focused ML/AI career strategist with live access to job listings. Every re
 
 ### Target Profile
 
-The squad is calibrated for the user's differentiators:
+The expert is calibrated for the user's differentiators:
 
 - GRPO fine-tuning (DeepSeek-R1 method)
 - LangGraph multi-agent systems
@@ -83,7 +83,7 @@ Runs at 06:00 and 18:00 Central. Searches for new ML/AI openings in DFW, extract
 
 ---
 
-## Creative Squad
+## Creative Expert
 
 **Intent:** `CREATIVE`
 
@@ -110,7 +110,7 @@ Runs at 07:00 Central. Searches for AI content creation and LinkedIn strategy tr
 
 ---
 
-## Spiritual Squad
+## Spiritual Expert
 
 **Intent:** `SPIRITUAL`
 
@@ -134,7 +134,7 @@ Supports KJV, WEB, YLT, DARBY, ASV, and BBE translations. KJV is the default.
 
 ### Scripture Handling
 
-When the user's message contains a scripture reference (e.g., "John 3:16" or "Psalm 23"), the squad extracts the reference via regex and fetches the exact verse before responding. If no reference is given, it fetches a random verse to anchor the response.
+When the user's message contains a scripture reference (e.g., "John 3:16" or "Psalm 23"), the expert extracts the reference via regex and fetches the exact verse before responding. If no reference is given, it fetches a random verse to anchor the response.
 
 Scripture is always quoted in italics with full citation:
 `_"For God so loved the world..."_ — John 3:16 KJV`
@@ -147,4 +147,4 @@ Runs at 05:15 Central. Fetches a random verse, writes a brief morning devotional
 
 ## PII Routing
 
-All squads respect the routing decision set by the PII detector. If the user's message contains SSN, credit card, email, phone, or IP address patterns, routing is forced to `LOCAL` and no external data sources (Jina, arXiv, HuggingFace, Bible API) are called. The response comes from the local Ollama model only.
+All experts respect the routing decision set by the PII detector. If the user's message contains SSN, credit card, email, phone, or IP address patterns, routing is forced to `LOCAL` and no external data sources (Jina, arXiv, HuggingFace, Bible API) are called. The response comes from the local Ollama model only.

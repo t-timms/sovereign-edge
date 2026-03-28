@@ -48,7 +48,7 @@ class SemanticCache:
         except Exception as exc:
             logger.warning("semantic_cache_unavailable: %s", exc)
 
-    async def lookup(self, query: str, squad: str = "") -> dict[str, Any] | None:
+    async def lookup(self, query: str, expert: str = "") -> dict[str, Any] | None:
         """
         Check cache for a semantically similar query.
 
@@ -66,20 +66,21 @@ class SemanticCache:
                 return None
 
             table = self._db.open_table(CACHE_TABLE)
-            rows = table.search(vec.tolist()).limit(1).to_list()
+            # metric="cosine" returns cosine *distance* (0=identical, 2=opposite).
+            # cosine_similarity = 1 - cosine_distance, giving values in [-1, 1].
+            rows = table.search(vec.tolist(), metric="cosine").limit(1).to_list()
             if not rows:
                 return None
 
             row = rows[0]
-            # LanceDB returns L2 distance; for unit vectors: cosine_sim = 1 - L2²/2
-            dist = float(row.get("_distance", 2.0))
-            similarity = max(0.0, 1.0 - dist / 2.0)
+            dist = float(row.get("_distance", 1.0))
+            similarity = max(0.0, 1.0 - dist)
 
             if similarity < CACHE_THRESHOLD:
                 return None
 
-            # Optional squad filter — empty squad matches any
-            if squad and row.get("squad", "") not in ("", squad):
+            # Optional expert filter — empty expert matches any
+            if expert and row.get("expert", "") not in ("", expert):
                 return None
 
             age_h = (time.time() - float(row.get("timestamp", 0.0))) / 3600
@@ -87,8 +88,8 @@ class SemanticCache:
                 return None
 
             logger.info(
-                "cache_hit squad=%s similarity=%.3f age_h=%.1f",
-                squad,
+                "cache_hit expert=%s similarity=%.3f age_h=%.1f",
+                expert,
                 similarity,
                 age_h,
             )
@@ -105,7 +106,7 @@ class SemanticCache:
             logger.debug("cache_lookup_failed", exc_info=True)
             return None
 
-    async def store(self, query: str, response: str, squad: str = "") -> None:
+    async def store(self, query: str, response: str, expert: str = "") -> None:
         """Store a query/response pair. Silently skips on any failure."""
         if not self._available or self._db is None:
             return
@@ -118,7 +119,7 @@ class SemanticCache:
             record = {
                 "query": query,
                 "response": response,
-                "squad": squad,
+                "expert": expert,
                 "timestamp": time.time(),
                 "vector": vec.tolist(),
             }
@@ -126,7 +127,7 @@ class SemanticCache:
                 self._db.open_table(CACHE_TABLE).add([record])
             else:
                 self._db.create_table(CACHE_TABLE, [record])
-            logger.debug("cache_stored squad=%s query_len=%d", squad, len(query))
+            logger.debug("cache_stored expert=%s query_len=%d", expert, len(query))
         except Exception:
             logger.debug("cache_store_failed", exc_info=True)
 

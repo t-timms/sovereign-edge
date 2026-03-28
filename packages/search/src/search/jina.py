@@ -51,8 +51,8 @@ def _get_client() -> httpx.AsyncClient:
             "Accept": "text/markdown",
             "X-Return-Format": "markdown",
         }
-        if settings.jina_api_key:
-            headers["Authorization"] = f"Bearer {settings.jina_api_key}"
+        if jina_key := settings.jina_api_key.get_secret_value():
+            headers["Authorization"] = f"Bearer {jina_key}"
         _client = httpx.AsyncClient(
             timeout=_TIMEOUT,
             headers=headers,

@@ -1,5 +1,5 @@
 """
-Career squad — LangGraph subgraph.
+Career expert — LangGraph subgraph.
 
 Pipeline:
     START → job_searcher → strategist → END
@@ -171,7 +171,7 @@ async def _strategist(state: CareerState) -> dict[str, Any]:
         messages=messages,
         max_tokens=max_tokens,
         routing=state["routing"],
-        squad="career",
+        expert="career",
     )
 
     return {
@@ -195,7 +195,7 @@ def _build() -> Any:
     builder.add_edge("job_searcher", "strategist")
     builder.add_edge("strategist", END)
 
-    return builder.compile(name="career_squad")
+    return builder.compile(name="career_expert")
 
 
 career_subgraph = _build() if _LANGGRAPH_AVAILABLE else None

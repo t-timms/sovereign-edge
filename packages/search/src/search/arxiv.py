@@ -148,16 +148,23 @@ async def fetch_recent(
 
 
 def format_papers(papers: list[dict[str, str]]) -> str:
-    """Render paper list as concise markdown suitable for LLM context."""
+    """Render paper list as concise markdown suitable for LLM context.
+
+    Handles both arXiv papers (with 'authors') and HuggingFace papers
+    (with 'upvotes') so the intelligence ranker's merged list always formats
+    cleanly regardless of source.
+    """
     if not papers:
         return ""
     lines: list[str] = []
     for p in papers:
         lines.append(f"**{p['title']}**")
-        if p["authors"]:
-            lines.append(f"*{p['authors']}*")
-        lines.append(p["summary"])
-        lines.append(f"→ {p['url']}")
+        if authors := p.get("authors", ""):
+            lines.append(f"*{authors}*")
+        elif upvotes := p.get("upvotes", ""):
+            lines.append(f"*HF Community Paper — ↑{upvotes} votes*")
+        lines.append(p.get("summary", ""))
+        lines.append(f"→ {p.get('url', '')}")
         lines.append("")
     return "\n".join(lines).strip()
 

@@ -1,5 +1,5 @@
 """
-Intelligence squad — LangGraph subgraph.
+Intelligence expert — LangGraph subgraph.
 
 Pipeline:
     START
@@ -15,7 +15,7 @@ Pipeline:
              END
 
 The subgraph exposes a compiled ``intelligence_subgraph`` instance that
-the squad and the director can invoke directly.  Falls back to ``None``
+the expert and the director can invoke directly.  Falls back to ``None``
 when LangGraph is not installed.
 """
 
@@ -172,18 +172,66 @@ async def _hf_fetcher(state: IntelligenceState) -> dict[str, Any]:
         return {"raw_papers": []}
 
 
-def _ranker(state: IntelligenceState) -> dict[str, Any]:
-    """Score papers by keyword relevance; return top 8. No LLM call."""
+# Lazy-loaded FlashRank cross-encoder (~4 MB model, CPU-only, downloaded on first use)
+_flashrank_ranker: Any = None
 
+
+def _get_flashrank() -> Any:
+    global _flashrank_ranker
+    if _flashrank_ranker is None:
+        try:
+            from flashrank import Ranker
+
+            _flashrank_ranker = Ranker(
+                model_name="ms-marco-MiniLM-L-4-v2", cache_dir="/tmp/flashrank"
+            )
+            logger.info("intel_flashrank_loaded")
+        except ImportError:
+            _flashrank_ranker = False
+            logger.debug("intel_flashrank_unavailable — using keyword fallback")
+    return _flashrank_ranker if _flashrank_ranker else None
+
+
+def _ranker(state: IntelligenceState) -> dict[str, Any]:
+    """Score papers by semantic relevance; return top 8. No LLM call.
+
+    Uses FlashRank cross-encoder when available (recommended). Falls back to
+    keyword counting when flashrank is not installed or the query is empty.
+    Install: uv add flashrank  (adds ~4 MB ONNX model on first run).
+    """
+    papers = state["raw_papers"]
+    if not papers:
+        return {"ranked_papers": []}
+
+    ranker = _get_flashrank()
+    if ranker is not None and state.get("query"):
+        try:
+            from flashrank import RerankRequest
+
+            passages = [
+                {
+                    "id": i,
+                    "text": (p.get("title", "") + " " + p.get("summary", "")).strip(),
+                }
+                for i, p in enumerate(papers)
+            ]
+            req = RerankRequest(query=state["query"], passages=passages)
+            results = ranker.rerank(req)
+            top_ids = [r["id"] for r in results[:8]]
+            ranked = [papers[i] for i in top_ids]
+            logger.info("intel_ranker_flashrank input=%d top=%d", len(papers), len(ranked))
+            return {"ranked_papers": ranked}
+        except Exception:  # graceful fallback to keyword scorer
+            logger.warning("intel_ranker_flashrank_failed — falling back to keyword", exc_info=True)
+
+    # Keyword fallback
     def _score(paper: dict) -> int:
         text = (paper.get("title", "") + " " + paper.get("summary", "")).lower()
         return sum(1 for kw in _RELEVANCE_KEYWORDS if kw in text)
 
-    ranked = sorted(state["raw_papers"], key=_score, reverse=True)
-    top = ranked[:8]
-    logger.info(
-        "intel_ranker input=%d top=%d", len(state["raw_papers"]), len(top)
-    )
+    ranked_kw = sorted(papers, key=_score, reverse=True)
+    top = ranked_kw[:8]
+    logger.info("intel_ranker_keyword input=%d top=%d", len(papers), len(top))
     return {"ranked_papers": top}
 
 
@@ -231,7 +279,7 @@ async def _synthesizer(state: IntelligenceState) -> dict[str, Any]:
         messages=messages,
         max_tokens=max_tokens,
         routing=state["routing"],
-        squad="intelligence",
+        expert="intelligence",
     )
 
     brief = BriefOutput(content=result["content"])
@@ -272,7 +320,7 @@ def _build() -> Any:
     builder.add_edge("ranker", "synthesizer")
     builder.add_edge("synthesizer", END)
 
-    return builder.compile(name="intelligence_squad")
+    return builder.compile(name="intelligence_expert")
 
 
 intelligence_subgraph = _build() if _LANGGRAPH_AVAILABLE else None
