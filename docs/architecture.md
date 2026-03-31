@@ -64,7 +64,11 @@ Reply (chunked at 4000 chars for Telegram, 2000 chars for Discord)
 
 ## LLM Gateway
 
-The gateway (`packages/llm`) wraps LiteLLM as a library (not a proxy) and manages a priority-ordered provider chain.
+The gateway (`packages/llm`) wraps LiteLLM as a library (not a proxy) and manages a priority-ordered provider chain. It exposes two completion methods:
+
+- `complete()` — standard text completion, returns `dict`
+- `complete_structured(response_model)` — instructor-wrapped completion, returns a validated Pydantic model. Used by career (`JobListingResponse`) and intelligence (`IntelBriefResponse`) to guarantee output format across all providers. Falls back to `None` on failure; callers then use `complete()`.
+
 
 ### Fallback Chain
 
@@ -122,12 +126,16 @@ Each expert is a compiled LangGraph `StateGraph`. The expert's `process()` metho
 
 | Expert | Subgraph pipeline |
 |---|---|
-| **Intelligence** | `arxiv_fetcher` + `hf_fetcher` (parallel) → `ranker` (FlashRank cross-encoder) → `synthesizer` |
-| **Career** | `job_searcher` (Jina live search) → `strategist` (LLM synthesis) |
+| **Intelligence** | `arxiv_fetcher` + `hf_fetcher` (parallel) → `ranker` (FlashRank + repo scoring) → `synthesizer` (`IntelBriefResponse`) |
+| **Career** | `job_searcher` (Jina + DFW filter) → `strategist` (`JobListingResponse`) |
 | **Creative** | `trend_researcher` (Jina live search) → `writer` (LLM generation) |
 | **Spiritual** | `scripture_fetcher` (Bible API) → `theologian` (LLM devotional) |
 
 The Intelligence subgraph runs `arxiv_fetcher` and `hf_fetcher` in the same LangGraph superstep (true parallel execution). Both fetchers write to a shared `raw_papers` list via `operator.add` merge, then `ranker` waits for both before scoring.
+
+**Repo-relevance scoring:** The `ranker` node scores each paper against `SE_REPO_TOPICS` keywords and annotates matching papers with repo names. These appear in the brief as `→ repo-name` tags, surfacing papers that could directly advance your local projects.
+
+**Structured output:** The `synthesizer` (intelligence) and `strategist` (career) nodes use `gateway.complete_structured()` with instructor-enforced Pydantic models. This guarantees consistent formatting — numbered lists, proper links, DFW location validation — regardless of which cloud provider handles the request. Both fall back to unstructured `complete()` if structured output fails.
 
 ---
 

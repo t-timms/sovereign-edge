@@ -1,5 +1,8 @@
 # Sovereign Edge
 
+[![Version](https://img.shields.io/badge/version-0.2.0-blue)](pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.11+-green)](pyproject.toml)
+
 A personal AI intelligence system — privacy-first, edge-deployed, and grounded in live data.
 
 Sovereign Edge runs four specialized AI agents on a Jetson Orin or any Linux ARM64/x86 host, accessible through Telegram and Discord. Every response is grounded with real-time data: live arXiv papers, HuggingFace Daily Papers, live Bible verse retrieval, and Jina web search. PII stays local. Cloud APIs are free-tier only. A scheduled morning pipeline delivers actionable briefs before the workday starts.
@@ -84,6 +87,7 @@ Bible API    Jina Search   arXiv +       Jina Search
 | Package management | uv (workspace) |
 | Agent orchestration | LangGraph (StateGraph subgraphs + director) |
 | LLM routing | LiteLLM 1.82.6 |
+| Structured output | instructor 1.14+ (Pydantic contracts on all expert responses) |
 | Cloud providers | Groq, Gemini, Cerebras, Mistral (all free tier) |
 | Local inference | Ollama (`qwen3:0.6b`) |
 | Embeddings | Ollama (`qwen3-embedding:0.6b`) |
@@ -128,13 +132,22 @@ Sovereign Edge is designed to serve one person. Configuration is entirely throug
 
 **`.env`** — API keys, bot credentials, storage paths, and career targeting. Copy from `.env.example`.
 
-The career expert is personalized through three environment variables:
+The career expert is personalized through environment variables:
 
-| Variable | Example |
+| Variable | Default | Description |
+|---|---|---|
+| `SE_CAREER_TARGET_LOCATION` | `Dallas Fort Worth TX` | Metro area for job searches |
+| `SE_CAREER_TARGET_CITIES` | DFW city list | Allowlist for location validation |
+| `SE_CAREER_TARGET_ROLES` | `ML Engineer, AI Engineer, LLM Engineer` | Target job titles |
+| `SE_CAREER_DIFFERENTIATORS` | *(empty)* | Skills to highlight in coaching |
+
+The intelligence expert can surface papers relevant to your local repos:
+
+| Variable | Description |
 |---|---|
-| `SE_CAREER_TARGET_LOCATION` | `Austin, TX` |
-| `SE_CAREER_TARGET_ROLES` | `ML Engineer, AI Engineer, LLM Engineer` |
-| `SE_CAREER_DIFFERENTIATORS` | `GRPO fine-tuning, LangGraph agents, vLLM serving` |
+| `SE_REPO_TOPICS` | Semicolon-separated `repo-name:keyword1,keyword2` pairs. Papers matching a repo's keywords are annotated in the brief. |
+
+Example: `SE_REPO_TOPICS="bible-ai:rag,orpo,fine-tuning; sovereign-edge:langgraph,mcp,agents; gpu-suite:tensorrt,vllm,quantization"`
 
 See [Configuration](docs/configuration.md) for all `SE_` variables.
 

@@ -91,9 +91,29 @@ Daily token caps per provider are set in `packages/llm/src/llm/gateway.py` (`tpd
 
 | Variable | Default | Description |
 |---|---|---|
-| `SE_CAREER_TARGET_LOCATION` | `your city or region` | Geographic focus for job searches |
+| `SE_CAREER_TARGET_LOCATION` | `Dallas Fort Worth TX` | Metro area used in search queries and system prompt |
+| `SE_CAREER_TARGET_CITIES` | DFW city list | Comma-separated cities for the DFW allowlist validator. Jobs not matching any city AND not remote/hybrid are filtered out at the schema level. |
 | `SE_CAREER_TARGET_ROLES` | `ML Engineer, AI Engineer, LLM Engineer` | Comma-separated target job titles |
 | `SE_CAREER_DIFFERENTIATORS` | *(empty)* | Comma-separated skills/differentiators to highlight in coaching |
+
+Job output is delivered as a guaranteed numbered list via instructor + Pydantic (`JobListingResponse`). If structured output fails for any provider, the system falls back to unstructured text automatically.
+
+---
+
+## Intelligence Personalization
+
+| Variable | Default | Description |
+|---|---|---|
+| `SE_REPO_TOPICS` | See below | Semicolon-separated `repo-name:kw1,kw2` pairs used to score papers against your local repos |
+
+Default value covers three repos:
+```
+bible-ai:rag,orpo,fine-tuning,graphrag,retrieval; sovereign-edge:langgraph,agents,mcp,tool-use; gpu-suite:inference,tensorrt,vllm,exllamav2,quantization,benchmark,cuda
+```
+
+Papers matching a repo's keywords are annotated in the intelligence brief with `→ repo-name`. Override to match your own project list.
+
+Paper briefs are delivered as a guaranteed numbered list via instructor + Pydantic (`IntelBriefResponse`). Falls back to unstructured text if structured output fails.
 
 ---
 
@@ -152,10 +172,13 @@ SE_SSD_ROOT=/mnt/ssd/sovereign-edge-data
 # Ollama
 SE_OLLAMA_HOST=http://localhost:11434
 
-# Career targeting
-SE_CAREER_TARGET_LOCATION=Austin, TX
+# Career targeting (DFW example)
+SE_CAREER_TARGET_LOCATION=Dallas Fort Worth TX
 SE_CAREER_TARGET_ROLES=ML Engineer, AI Engineer, LLM Engineer
 SE_CAREER_DIFFERENTIATORS=GRPO fine-tuning, LangGraph agents, vLLM serving
+
+# Intelligence — paper relevance scoring against local repos
+SE_REPO_TOPICS=bible-ai:rag,orpo,fine-tuning,graphrag; sovereign-edge:langgraph,agents,mcp; gpu-suite:tensorrt,vllm,quantization
 
 # Scheduling
 SE_TIMEZONE=US/Central
