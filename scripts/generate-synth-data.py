@@ -1,12 +1,13 @@
 """Generate synthetic training data for the DistilBERT intent router.
 
-Writes JSONL to data/router_train.jsonl — format: {"text": "...", "label": 0-3}
+Writes JSONL to data/router_train.jsonl — format: {"text": "...", "label": 0-4}
 
 Label mapping:
   0 = spiritual
   1 = career
   2 = intelligence
   3 = creative
+  4 = goals
 
 Run:
     uv run python scripts/generate-synth-data.py
@@ -30,6 +31,7 @@ LABEL_MAP: dict[str, int] = {
     "career": 1,
     "intelligence": 2,
     "creative": 3,
+    "goals": 4,
 }
 
 # ── Seed examples per class ───────────────────────────────────────────────────
@@ -176,6 +178,39 @@ _CREATIVE: list[str] = [
     "Draft a short Twitter thread about agentic AI patterns",
 ]
 
+_GOALS: list[str] = [
+    "Add a new goal to get a job by end of month",
+    "Show me my active goals",
+    "Mark my resume update goal as complete",
+    "What goals do I have in progress?",
+    "Add a habit to read the Bible every morning",
+    "How am I progressing on my fitness goal?",
+    "Set a milestone to finish the sovereign-edge deployment",
+    "List all my incomplete goals",
+    "Create a goal to launch my YouTube channel this quarter",
+    "Update my job search goal progress to 50%",
+    "Add an objective to finish the GRPO fine-tuning project",
+    "What milestones have I completed this week?",
+    "Set a daily habit to review job postings",
+    "Show me goals I haven't touched in a week",
+    "Add a goal to publish three LinkedIn posts this month",
+    "Mark the Jetson deployment milestone as done",
+    "What is my current goal completion rate?",
+    "Create a habit tracker for morning workouts",
+    "Add a goal to study LangGraph for 30 minutes daily",
+    "List goals due this week",
+    "Set a new objective to apply to 5 jobs this week",
+    "Show me all habits I'm tracking",
+    "Complete the resume review goal",
+    "Add a goal to finish the Bible AI project by next month",
+    "How many goals do I have active right now?",
+    "Create a milestone for passing a technical interview",
+    "What goals am I behind on?",
+    "Add a learning goal to master TensorRT-LLM",
+    "Mark my morning devotional habit as done for today",
+    "Show me my goal history for this month",
+]
+
 # Augmentation templates — slot {seed} into variations
 _AUGMENT_TEMPLATES: dict[str, list[str]] = {
     "spiritual": [
@@ -206,6 +241,13 @@ _AUGMENT_TEMPLATES: dict[str, list[str]] = {
         "Please help me — {seed}",
         "New content idea: {seed}",
     ],
+    "goals": [
+        "{seed}",
+        "Goal update: {seed}",
+        "Tracking request: {seed}",
+        "Progress check — {seed}",
+        "Habit/goal: {seed}",
+    ],
 }
 
 _SEEDS: dict[str, list[str]] = {
@@ -213,6 +255,7 @@ _SEEDS: dict[str, list[str]] = {
     "career": _CAREER,
     "intelligence": _INTELLIGENCE,
     "creative": _CREATIVE,
+    "goals": _GOALS,
 }
 
 

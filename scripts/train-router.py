@@ -32,7 +32,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-_LABEL_NAMES = ["spiritual", "career", "intelligence", "creative"]
+_LABEL_NAMES = ["spiritual", "career", "intelligence", "creative", "goals"]
 _MODEL_NAME = "distilbert-base-uncased"
 _MAX_LENGTH = 128
 
@@ -201,6 +201,7 @@ def export_onnx(hf_model_dir: Path, onnx_fp32_path: Path) -> None:
                 "logits": {0: "batch"},
             },
             opset_version=14,
+            dynamo=False,
         )
     logger.info("ONNX FP32 export complete: %s", onnx_fp32_path)
 
@@ -219,7 +220,6 @@ def quantize_int8(fp32_path: Path, int8_path: Path) -> None:
         model_input=str(fp32_path),
         model_output=str(int8_path),
         weight_type=QuantType.QInt8,
-        optimize_model=True,
     )
     logger.info("INT8 quantization complete: %s", int8_path)
 
@@ -321,10 +321,12 @@ def validate_accuracy(int8_path: Path, tokenizer_dir: Path) -> None:
         ("Find me ML Engineer jobs in Dallas", "career"),
         ("What is NVDA stock price today?", "intelligence"),
         ("Write a YouTube script about LangGraph", "creative"),
+        ("Show me my active goals", "goals"),
         ("Explain John 3:16", "spiritual"),
         ("Help me rewrite my resume for a machine learning role", "career"),
         ("Show me the latest AI research papers", "intelligence"),
         ("Draft a LinkedIn post about my AI project", "creative"),
+        ("Add a goal to finish the deployment by Friday", "goals"),
     ]
 
     correct = 0
