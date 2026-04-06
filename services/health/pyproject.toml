@@ -1,6 +1,6 @@
 [project]
 name = "sovereign-edge-health"
-version = "0.2.0"
+version = "0.3.6"
 description = "Health, readiness, and dashboard endpoints for the sovereign-edge container"
 requires-python = ">=3.11"
 dependencies = [

@@ -1,6 +1,6 @@
 [project]
 name = "sovereign-edge"
-version = "0.3.1"
+version = "0.3.6"
 description = "Sovereign Edge Personal Intelligence System"
 requires-python = ">=3.11"
 license = {text = "MIT"}

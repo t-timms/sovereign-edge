@@ -278,7 +278,7 @@ async def _check_url_live(url: str, client: httpx.AsyncClient) -> bool:
     try:
         resp = await client.head(url, follow_redirects=True)
         return resp.status_code < 400
-    except Exception:
+    except httpx.RequestError:
         return True  # Fail open: keep listing if we can't reach the URL
 
 

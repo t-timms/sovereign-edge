@@ -19,6 +19,17 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Coverage reporting (`--cov` + `--cov-report=term-missing`) added to CI test job.
 
 ### Changed
+- All workspace package versions aligned to `0.3.6` (were split across `0.1.0`–`0.3.5`; services/discord, services/mcp, services/whatsapp, agents/goals lagged furthest).
+
+### Fixed
+- `packages/search/src/search/jina.py`: replace bare `except Exception` in `_is_private_address` with `(TimeoutError, OSError, ValueError)` — prevents swallowing `CancelledError` in async context.
+- `agents/career/src/career/subgraph.py`: replace bare `except Exception` in `_check_url_live` with `httpx.RequestError` — only network errors are expected in this HTTP HEAD check.
+- `services/telegram/src/telegram_bot/bot.py`: replace `print()` in single-instance flock guard with structured `logger.error()`.
+- Remove four stale `noqa` directives flagged by ruff after prior fixes.
+
+---
+
+### Changed (prior)
 - `uv.lock` removed from `.gitignore` — lock file is now committed for reproducible builds.
 - `litellm` unpinned from `1.82.6` — upgraded to `>=1.83.0,<2.0.0`, skipping the compromised 1.82.7/1.82.8 range. See `SECURITY.md` for incident details.
 - `dependabot.yml` LiteLLM ignore exception removed — future upgrades are welcome.

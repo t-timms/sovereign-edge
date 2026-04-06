@@ -129,7 +129,7 @@ async def _is_private_url(url: str) -> bool:
         )
         addr = ipaddress.ip_address(resolved)
         return any(addr in net for net in _PRIVATE_NETS)
-    except Exception:
+    except (TimeoutError, OSError, ValueError):
         return True  # Fail closed on any resolution error or timeout
 
 

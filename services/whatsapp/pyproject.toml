@@ -1,6 +1,6 @@
 [project]
 name = "sovereign-edge-whatsapp"
-version = "0.1.0"
+version = "0.3.6"
 description = "WhatsApp integration for Sovereign Edge via Twilio"
 requires-python = ">=3.11"
 dependencies = [

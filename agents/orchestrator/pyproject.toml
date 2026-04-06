@@ -1,6 +1,6 @@
 [project]
 name = "sovereign-edge-orchestrator"
-version = "0.3.1"
+version = "0.3.6"
 requires-python = ">=3.11"
 dependencies = [
     "sovereign-edge-core",

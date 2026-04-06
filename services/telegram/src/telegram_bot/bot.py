@@ -656,11 +656,7 @@ def main() -> None:
     try:
         fcntl.flock(lock_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
-        print(
-            f"sovereign-edge-telegram already running (lock held: {_LOCK_PATH}). "
-            "Exiting to prevent duplicate bot.",
-            file=sys.stderr,
-        )
+        logger.error("telegram_already_running lock_path=%s", _LOCK_PATH)
         lock_fh.close()
         sys.exit(1)
 
