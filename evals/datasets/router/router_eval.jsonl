@@ -1,0 +1,24 @@
+{"text": "What does the Bible say about forgiveness?", "expected_intent": "spiritual", "expected_confidence_min": 0.6}
+{"text": "Give me a verse about strength and courage", "expected_intent": "spiritual", "expected_confidence_min": 0.6}
+{"text": "Explain the meaning of John 3:16", "expected_intent": "spiritual", "expected_confidence_min": 0.6}
+{"text": "Write me a morning devotional for today", "expected_intent": "spiritual", "expected_confidence_min": 0.5}
+{"text": "What does Psalm 23 mean?", "expected_intent": "spiritual", "expected_confidence_min": 0.5}
+{"text": "Who wrote the book of Romans?", "expected_intent": "spiritual", "expected_confidence_min": 0.5}
+{"text": "Find me ML Engineer jobs in Dallas", "expected_intent": "career", "expected_confidence_min": 0.6}
+{"text": "Help me rewrite my resume for a machine learning role", "expected_intent": "career", "expected_confidence_min": 0.6}
+{"text": "What questions do FAANG companies ask in ML interviews?", "expected_intent": "career", "expected_confidence_min": 0.5}
+{"text": "Find software engineering openings in DFW", "expected_intent": "career", "expected_confidence_min": 0.5}
+{"text": "What is a good salary for a senior ML engineer?", "expected_intent": "career", "expected_confidence_min": 0.5}
+{"text": "How do I negotiate a higher salary offer?", "expected_intent": "career", "expected_confidence_min": 0.5}
+{"text": "What is NVDA stock price today?", "expected_intent": "intelligence", "expected_confidence_min": 0.6}
+{"text": "Show me the latest AI research papers", "expected_intent": "intelligence", "expected_confidence_min": 0.5}
+{"text": "What happened to Microsoft stock this week?", "expected_intent": "intelligence", "expected_confidence_min": 0.6}
+{"text": "Summarize recent LLM papers from arXiv", "expected_intent": "intelligence", "expected_confidence_min": 0.5}
+{"text": "What are the top AI news stories today?", "expected_intent": "intelligence", "expected_confidence_min": 0.5}
+{"text": "How is the S&P 500 performing?", "expected_intent": "intelligence", "expected_confidence_min": 0.6}
+{"text": "Write a YouTube script about LangGraph multi-agent systems", "expected_intent": "creative", "expected_confidence_min": 0.6}
+{"text": "Create a D2 diagram for a RAG pipeline architecture", "expected_intent": "creative", "expected_confidence_min": 0.6}
+{"text": "Draft a LinkedIn post about my new GRPO fine-tuning project", "expected_intent": "creative", "expected_confidence_min": 0.5}
+{"text": "Write a video script about fine-tuning with Unsloth", "expected_intent": "creative", "expected_confidence_min": 0.6}
+{"text": "Generate a Manim animation script for explaining attention", "expected_intent": "creative", "expected_confidence_min": 0.5}
+{"text": "Design a D2 diagram for the Sovereign Edge architecture", "expected_intent": "creative", "expected_confidence_min": 0.5}

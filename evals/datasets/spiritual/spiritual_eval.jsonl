@@ -1,0 +1,6 @@
+{"query": "What does the Bible say about anxiety?", "must_contain": ["philippians", "cast", "worry", "peace"], "must_not_contain": ["fabricat", "I'm not sure of the reference"], "min_length": 100}
+{"query": "Explain John 3:16", "must_contain": ["world", "believe", "eternal", "god"], "must_not_contain": [], "min_length": 80}
+{"query": "What does Psalm 23 teach about God?", "must_contain": ["shepherd", "lord", "valley", "dwell"], "must_not_contain": [], "min_length": 100}
+{"query": "Give me a verse about God's faithfulness", "must_contain": [], "must_not_contain": ["I cannot", "I don't know"], "min_length": 50, "must_cite_verse": true}
+{"query": "What is the fruit of the Spirit in Galatians?", "must_contain": ["love", "joy", "peace", "galatians"], "must_not_contain": [], "min_length": 80}
+{"query": "Write a short morning devotional about trust", "must_contain": [], "must_not_contain": [], "min_length": 150, "is_devotional": true}

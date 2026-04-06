@@ -1,0 +1,4 @@
+{"query": "Write a YouTube script about LangGraph", "must_contain": ["langgraph", "hook", "script"], "must_not_contain": [], "min_length": 200}
+{"query": "Create a D2 diagram for a RAG pipeline", "must_contain": ["->", "rag"], "must_not_contain": [], "min_length": 50}
+{"query": "Draft a LinkedIn post about my LLM fine-tuning project", "must_contain": ["linkedin", "fine-tun"], "must_not_contain": [], "min_length": 100}
+{"query": "Write a Twitter thread about building agents with LangGraph", "must_contain": ["thread", "agent", "langgraph"], "must_not_contain": [], "min_length": 100}

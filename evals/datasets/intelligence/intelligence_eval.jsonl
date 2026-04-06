@@ -1,0 +1,4 @@
+{"query": "What is the current NVDA stock trend?", "must_contain": ["nvda", "nvidia"], "must_not_contain": [], "min_length": 30}
+{"query": "Summarize recent papers about reasoning models", "must_contain": ["reasoning", "model"], "must_not_contain": [], "min_length": 100}
+{"query": "Give me a market summary for my watchlist", "must_contain": [], "must_not_contain": ["no market data"], "min_length": 30}
+{"query": "What new LLM papers came out this week?", "must_contain": ["paper", "model"], "must_not_contain": [], "min_length": 80}

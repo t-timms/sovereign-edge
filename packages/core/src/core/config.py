@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     discord_owner_user_id: str = ""
     alpha_vantage_key: SecretStr = SecretStr("")
     jina_api_key: SecretStr = SecretStr("")
+    fmp_api_key: SecretStr = SecretStr("")  # Financial Modeling Prep — earnings transcripts
+
+    # Voice service
+    stt_model: str = "base.en"  # faster-whisper: tiny.en, base.en, small.en, medium.en
 
     # Cloud API Rate Limits (requests per minute) — tune per deployment
     groq_rpm: int = 30

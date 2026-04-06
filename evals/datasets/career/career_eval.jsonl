@@ -1,0 +1,5 @@
+{"query": "Find ML Engineer jobs in Dallas", "must_contain": ["dallas", "engineer", "ml", "job"], "must_not_contain": [], "min_length": 50}
+{"query": "What should I include in a cover letter for an AI role?", "must_contain": ["cover letter", "experience", "skills"], "must_not_contain": [], "min_length": 100}
+{"query": "How do I prepare for a system design interview?", "must_contain": ["design", "interview", "system"], "must_not_contain": [], "min_length": 100}
+{"query": "What is a fair salary for a senior ML engineer in Texas?", "must_contain": [], "must_not_contain": [], "min_length": 50, "must_include_number": true}
+{"query": "Help me tailor my resume for a LangGraph position", "must_contain": ["resume", "langgraph"], "must_not_contain": [], "min_length": 100}

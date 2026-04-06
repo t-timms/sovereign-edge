@@ -2,6 +2,7 @@
 
 from core.config import Settings, get_settings
 from core.expert import BaseExpert
+from core.security import sanitize_input
 from core.types import (
     Intent,
     RoutingDecision,
@@ -21,4 +22,5 @@ __all__ = [
     "TaskRequest",
     "TaskResult",
     "get_settings",
+    "sanitize_input",
 ]
