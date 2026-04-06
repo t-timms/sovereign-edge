@@ -73,6 +73,7 @@ class ProviderConfig:
     tpd: int  # Tokens per day (approximate limit)
     priority: int  # Lower = tried first
     env_key: str  # Environment variable name for API key
+    supports_structured: bool = True  # False for models that refuse tool/function calling
 
 
 def _build_providers(s: Settings) -> list[ProviderConfig]:
@@ -84,6 +85,7 @@ def _build_providers(s: Settings) -> list[ProviderConfig]:
             tpd=500_000,
             priority=1,
             env_key="GROQ_API_KEY",
+            supports_structured=False,  # Llama 4 Scout generates free-text instead of tool calls
         ),
         ProviderConfig(
             model="gemini/gemini-2.5-flash",
@@ -93,7 +95,7 @@ def _build_providers(s: Settings) -> list[ProviderConfig]:
             env_key="GOOGLE_API_KEY",
         ),
         ProviderConfig(
-            model="cerebras/llama-3.3-70b",
+            model="cerebras/llama3.3-70b",
             rpm=s.cerebras_rpm,
             tpd=1_000_000,
             priority=3,
@@ -414,6 +416,8 @@ class LLMGateway:
         )
 
         for provider in sorted(self._providers, key=sort_key):
+            if not provider.supports_structured:
+                continue
             if not os.environ.get(provider.env_key):
                 continue  # provider not configured
             if self.tracker.get(provider.model) >= provider.tpd:
