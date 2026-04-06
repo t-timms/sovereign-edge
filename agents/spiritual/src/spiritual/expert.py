@@ -167,7 +167,7 @@ class SpiritualExpert(BaseExpert):
                         if verse_text
                         else (
                             "Generate a brief morning devotional with a scripture verse, "
-                            "2-3 sentences of reflection, and a one-sentence prayer. Under 120 words."
+                            "2-3 sentences of reflection, and a one-sentence prayer. Under 120 words."  # noqa: E501
                         )
                     ),
                 },

@@ -76,7 +76,7 @@ Available experts:
 
 RULES:
 1. Return a JSON object ONLY — no prose, no markdown fences.
-2. The "experts" list contains 1–3 expert names in execution order.
+2. The "experts" list contains 1-3 expert names in execution order.
 3. The "rationale" is one sentence explaining why.
 4. Use multiple experts ONLY when the query clearly needs it.
    Single-expert queries are the common case — do not over-engineer.
@@ -96,10 +96,14 @@ EXAMPLES:
   Output: {"experts": ["spiritual"], "rationale": "Pure scripture question.", "context_pass": false}
 
   Input: "Research the latest GRPO papers and write a LinkedIn post about them"
-  Output: {"experts": ["intelligence", "creative"], "rationale": "Research first, then draft the post using those findings.", "context_pass": true}
+  Output: {"experts": ["intelligence", "creative"],
+           "rationale": "Research first, then draft the post using those findings.",
+           "context_pass": true}
 
   Input: "Find ML engineer jobs at companies building inference chips"
-  Output: {"experts": ["intelligence", "career"], "rationale": "Intelligence identifies target companies, career searches those.", "context_pass": true}
+  Output: {"experts": ["intelligence", "career"],
+           "rationale": "Intelligence identifies target companies, career searches those.",
+           "context_pass": true}
 """
 
 
@@ -154,7 +158,7 @@ class DirectorGraph:
                 "director_langgraph_unavailable — install langgraph>=1.0 for multi-expert chains"
             )
 
-    def _build_graph(self) -> Any:
+    def _build_graph(self) -> Any:  # noqa: ANN401
         """Construct the StateGraph. Called once at init."""
         graph = StateGraph(DirectorState)
 
@@ -297,7 +301,7 @@ class DirectorGraph:
         merge_prompt = (
             "You have received outputs from multiple AI experts for a single user request. "
             "Weave them into ONE coherent, well-structured response. "
-            "Do not repeat yourself. Keep the Telegram Markdown format (*bold*, _italic_, links).\n\n"
+            "Do not repeat yourself. Keep the Telegram Markdown format (*bold*, _italic_, links).\n\n"  # noqa: E501
             + "\n\n---\n".join(f"Expert output {i + 1}:\n{r}" for i, r in enumerate(results))
         )
         try:
@@ -414,7 +418,7 @@ def _extract_json(text: str) -> dict[str, Any]:
         return {}
 
 
-def _get_expert_subgraph(expert_name: str) -> Any | None:
+def _get_expert_subgraph(expert_name: str) -> Any | None:  # noqa: ANN401
     """Return the compiled subgraph for a given expert name, or None.
 
     Catches all exceptions (not just ImportError) so a NameError or other

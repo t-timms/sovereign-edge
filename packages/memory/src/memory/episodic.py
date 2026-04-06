@@ -78,7 +78,7 @@ class EpisodicMemory:
         """Non-blocking add — runs Mem0's sync extraction in a thread-pool executor.
 
         Prefer this over add() in async call sites. Mem0's Ollama LLM + embedding
-        calls take 200–800 ms and must not stall the asyncio event loop.
+        calls take 200-800 ms and must not stall the asyncio event loop.
         """
         if not self._available or not self._memory:
             return

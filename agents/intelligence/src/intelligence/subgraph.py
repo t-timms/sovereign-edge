@@ -255,14 +255,14 @@ async def _hf_fetcher(state: IntelligenceState) -> dict[str, Any]:
 _flashrank_ranker: Any = None
 
 
-def _get_flashrank() -> Any:
+def _get_flashrank() -> Any:  # noqa: ANN401
     global _flashrank_ranker
     if _flashrank_ranker is None:
         try:
             from flashrank import Ranker
 
             _flashrank_ranker = Ranker(
-                model_name="ms-marco-MiniLM-L-4-v2", cache_dir="/tmp/flashrank"
+                model_name="ms-marco-MiniLM-L-4-v2", cache_dir="/tmp/flashrank"  # noqa: S108
             )
             logger.info("intel_flashrank_loaded")
         except ImportError:
@@ -477,7 +477,7 @@ async def _synthesizer(state: IntelligenceState) -> dict[str, Any]:
 # ── Graph construction ────────────────────────────────────────────────────────
 
 
-def _build() -> Any:
+def _build() -> Any:  # noqa: ANN401
     builder: StateGraph = StateGraph(IntelligenceState)
 
     builder.add_node("arxiv_fetcher", _arxiv_fetcher)

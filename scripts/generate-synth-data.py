@@ -218,7 +218,7 @@ _SEEDS: dict[str, list[str]] = {
 
 def generate_samples(n_per_class: int, seed: int = 42) -> list[dict[str, str | int]]:
     """Generate n_per_class samples per label via seed + augmentation."""
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # noqa: S311 — seeded augmentation for ML training data, not crypto
     samples: list[dict[str, str | int]] = []
 
     for label_name, label_idx in LABEL_MAP.items():
@@ -255,7 +255,7 @@ def main() -> None:
         "--samples",
         type=int,
         default=200,
-        help="Samples per class (default: 200, total = samples × 4)",
+        help="Samples per class (default: 200, total = samples x 4)",
     )
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     args = parser.parse_args()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from core.types import IntentClass, RouterResult, SquadState
 
 
@@ -27,13 +28,10 @@ def test_router_result_not_confident() -> None:
 
 def test_router_result_immutable() -> None:
     r = RouterResult(intent=IntentClass.CAREER, confidence=0.8)
-    with pytest.raises(Exception):
+    with pytest.raises(Exception):  # noqa: B017 — pydantic frozen model; exact exception type is internal
         r.intent = IntentClass.CREATIVE  # type: ignore[misc]
 
 
 def test_squad_state_protocol_satisfied_by_dict() -> None:
     state: dict = {"intent": "career", "messages": []}
     assert isinstance(state, SquadState)
-
-
-import pytest

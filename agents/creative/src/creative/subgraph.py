@@ -168,7 +168,7 @@ async def _writer(state: CreativeState) -> dict[str, Any]:
 # ── Graph construction ────────────────────────────────────────────────────────
 
 
-def _build() -> Any:
+def _build() -> Any:  # noqa: ANN401
     builder: StateGraph = StateGraph(CreativeState)
 
     builder.add_node("trend_researcher", _trend_researcher)

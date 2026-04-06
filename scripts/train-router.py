@@ -55,7 +55,7 @@ def load_jsonl(path: Path) -> list[dict]:
 def split_train_val(rows: list[dict], val_frac: float = 0.1, seed: int = 42) -> tuple[list, list]:
     import random
 
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # noqa: S311 — seeded shuffle for ML split, not crypto
     shuffled = rows.copy()
     rng.shuffle(shuffled)
     split = int(len(shuffled) * (1 - val_frac))
@@ -287,7 +287,7 @@ def validate_latency(int8_path: Path, tokenizer_dir: Path, n_samples: int = 20) 
     p99 = sorted(latencies)[int(len(latencies) * 0.99)]
     logger.info("Latency p50=%.2fms  p99=%.2fms  max=%.2fms", p50, p99, max(latencies))
 
-    slow = [l for l in latencies if l > 10.0]
+    slow = [lat for lat in latencies if lat > 10.0]
     if slow:
         logger.warning(
             "%d/%d samples exceeded 10ms threshold (max=%.2fms)",

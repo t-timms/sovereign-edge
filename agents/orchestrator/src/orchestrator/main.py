@@ -306,7 +306,7 @@ class Orchestrator:
             full_content += chunk
             yield chunk
 
-        # ── 4–6. Post-stream bookkeeping (same as dispatch) ─────────────
+        # ── 4-6. Post-stream bookkeeping (same as dispatch) ─────────────
         if request.routing == RoutingDecision.CLOUD and request.intent != Intent.INTELLIGENCE:
             try:
                 from memory.semantic_cache import get_cache
@@ -495,7 +495,7 @@ class Orchestrator:
                 logger.info("director_initialized experts=%s", list(self._experts.keys()))
             except ImportError:
                 logger.warning(
-                    "director_import_failed — install sovereign-edge-director for multi-expert chains"
+                    "director_import_failed — install sovereign-edge-director for multi-expert chains"  # noqa: E501
                 )
         logger.info("orchestrator_started director=%s", self._use_director)
 

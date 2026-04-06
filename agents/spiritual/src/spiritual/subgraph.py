@@ -168,7 +168,7 @@ async def _theologian(state: SpiritualState) -> dict[str, Any]:
 # ── Graph construction ────────────────────────────────────────────────────────
 
 
-def _build() -> Any:
+def _build() -> Any:  # noqa: ANN401
     builder: StateGraph = StateGraph(SpiritualState)
 
     builder.add_node("scripture_fetcher", _scripture_fetcher)

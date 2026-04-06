@@ -139,7 +139,7 @@ FORBIDDEN — these render as literal characters in Telegram:
 
 JOB LIST FORMAT — each entry must follow this exact template:
   1. *Company Name* — Role Title
-     _City, TX_ | Salary: $XXXk–$XXXk (if listed)
+     _City, TX_ | Salary: $XXXk-$XXXk (if listed)
      [Apply →](https://direct-link)
 
   2. *Company Name* — Role Title
@@ -176,13 +176,13 @@ def build_system_prompt() -> str:
         f"OR jobs explicitly marked remote/hybrid that are open to {location} candidates.\n"
         f"HARD RULE: Do not list jobs in other cities (NYC, SF, Seattle, etc.) unless remote.\n\n"
         f"You have access to live search results. For each job listing extract and present:\n"
-        f"company name, role title, city/state, salary (if shown), and an application link.{diff_section}\n\n"
-        f"LINK PRIORITY — LinkedIn and Indeed job URLs expire within days of the position being filled.\n"
+        f"company name, role title, city/state, salary (if shown), and an application link.{diff_section}\n\n"  # noqa: E501
+        f"LINK PRIORITY — LinkedIn and Indeed job URLs expire within days of the position being filled.\n"  # noqa: E501
         f"Use this priority order for apply_url:\n"
-        f"  1. Company's own careers page (careers.company.com, company.com/careers) — most stable\n"
+        f"  1. Company's own careers page (careers.company.com, company.com/careers) — most stable\n"  # noqa: E501
         f"  2. Direct ATS link (greenhouse.io, lever.co, workday.com, icims.com) — stable\n"
         f"  3. LinkedIn or Indeed URL — only if no stable link is available\n"
-        f"If only a LinkedIn/Indeed URL is found, still include it but note it may have expired.\n\n"
+        f"If only a LinkedIn/Indeed URL is found, still include it but note it may have expired.\n\n"  # noqa: E501
         f"When no search results are available, share 2-3 known {location} ML/AI employers\n"
         f"actively hiring and link directly to their careers pages."
     )
@@ -200,8 +200,8 @@ def build_search_queries() -> list[str]:
     today = datetime.date.today()
     freshness = f"{today.year}-{today.month:02d}"
     return [
-        f'("{roles}") ("{location}" OR "Dallas" OR "Plano" OR "Irving" OR "Frisco") hiring {freshness} -filled -expired',
-        f'machine learning engineer AI engineer "{location}" OR "Dallas TX" OR "Plano TX" jobs {today.year} -"New York" -"San Francisco" -"Seattle"',
+        f'("{roles}") ("{location}" OR "Dallas" OR "Plano" OR "Irving" OR "Frisco") hiring {freshness} -filled -expired',  # noqa: E501
+        f'machine learning engineer AI engineer "{location}" OR "Dallas TX" OR "Plano TX" jobs {today.year} -"New York" -"San Francisco" -"Seattle"',  # noqa: E501
     ]
 
 
@@ -246,8 +246,8 @@ async def _job_searcher(state: CareerState) -> dict[str, Any]:
             year = datetime.date.today().year
             # Tighten location filter and add year for freshness
             query = (
-                f'{state["query"]} ML Engineer AI job "{location}" OR "Dallas" OR "Plano" OR "Irving" '
-                f'{year} -"New York" -"San Francisco" -"Chicago" -"Seattle" -"Austin" -filled -expired'
+                f'{state["query"]} ML Engineer AI job "{location}" OR "Dallas" OR "Plano" OR "Irving" '  # noqa: E501
+                f'{year} -"New York" -"San Francisco" -"Chicago" -"Seattle" -"Austin" -filled -expired'  # noqa: E501
             )
 
         results = await jina_search(query, max_results=5)
@@ -333,7 +333,7 @@ async def _strategist(state: CareerState) -> dict[str, Any]:
 # ── Graph construction ────────────────────────────────────────────────────────
 
 
-def _build() -> Any:
+def _build() -> Any:  # noqa: ANN401
     builder: StateGraph = StateGraph(CareerState)
 
     builder.add_node("job_searcher", _job_searcher)

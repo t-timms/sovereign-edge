@@ -21,7 +21,7 @@ import time
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from datetime import date
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import litellm
 from core.config import get_settings
@@ -381,7 +381,7 @@ class LLMGateway:
         max_tokens: int,
         temperature: float,
         expert: str,
-        instructor_module: Any,
+        instructor_module: Any,  # noqa: ANN401
     ) -> _ModelT | None:
         """Attempt one provider with instructor validation. Returns None to try next."""
         client = instructor_module.from_litellm(litellm.acompletion)

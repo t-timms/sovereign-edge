@@ -51,13 +51,13 @@ class Settings(BaseSettings):
 
     # Career Expert — override to target a different location/role
     career_target_location: str = "Dallas Fort Worth TX"
-    career_target_cities: str = "Dallas,Fort Worth,Plano,Irving,Frisco,Allen,McKinney,Richardson,Arlington,Southlake,Addison,Carrollton"
+    career_target_cities: str = "Dallas,Fort Worth,Plano,Irving,Frisco,Allen,McKinney,Richardson,Arlington,Southlake,Addison,Carrollton"  # noqa: E501
     career_target_roles: str = "ML Engineer, AI Engineer, LLM Engineer"
     career_differentiators: str = ""  # comma-separated; empty = generic coaching
 
     # Intelligence Expert — comma-separated repo topics for paper relevance scoring
-    # e.g. "bible-ai:rag,orpo,fine-tuning,graphrag; sovereign-edge:langgraph,agents,mcp; gpu-suite:inference,tensorrt,vllm"
-    repo_topics: str = "bible-ai:rag,orpo,fine-tuning,graphrag,retrieval; sovereign-edge:langgraph,agents,mcp,tool-use; gpu-suite:inference,tensorrt,vllm,exllamav2,quantization,benchmark,cuda"
+    # e.g. "bible-ai:rag,orpo,fine-tuning,graphrag; sovereign-edge:langgraph,agents,mcp; gpu-suite:inference,tensorrt,vllm"  # noqa: E501
+    repo_topics: str = "bible-ai:rag,orpo,fine-tuning,graphrag,retrieval; sovereign-edge:langgraph,agents,mcp,tool-use; gpu-suite:inference,tensorrt,vllm,exllamav2,quantization,benchmark,cuda"  # noqa: E501
 
     # Feature Flags
     voice_enabled: bool = False
