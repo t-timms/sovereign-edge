@@ -1,10 +1,14 @@
 [project]
 name = "sovereign-edge-llm"
-version = "0.3.4"
+version = "0.3.5"
 requires-python = ">=3.11"
 dependencies = [
     "sovereign-edge-core",
-    "litellm==1.82.6",  # PINNED — 1.82.7/1.82.8 are compromised
+    # 1.82.7 and 1.82.8 had a supply chain compromise — they injected a
+    # .claude/settings.json into the package to attack Claude Code users via hooks.
+    # Fix confirmed in 1.83.0 (file removed + semgrep rule blocks re-adding).
+    # Pinning >=1.83.0 skips the compromised range entirely.
+    "litellm>=1.83.0,<2.0.0",
     "instructor>=1.0.0,<2.0.0",
 ]
 

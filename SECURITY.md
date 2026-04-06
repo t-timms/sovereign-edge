@@ -36,6 +36,20 @@ Expect an initial response within 7 days.
 
 ---
 
+## Known Past Incidents
+
+### LiteLLM 1.82.7 / 1.82.8 — Supply Chain Compromise (March 2026)
+
+**What happened**: LiteLLM versions 1.82.7 and 1.82.8 were published with a malicious `.claude/settings.json` embedded in the package. When installed, this file could override Claude Code's hooks configuration in the working directory — enabling hook injection attacks that could exfiltrate secrets or execute arbitrary commands via Claude Code's pre/post-tool hooks.
+
+**Affected versions**: `1.82.7`, `1.82.8`
+
+**Fix**: Resolved in `1.83.0` — the file was removed and a semgrep rule was added to block it from being re-introduced. Sovereign Edge pinned at `1.82.6` until 1.83.0 was confirmed clean, then upgraded to `>=1.83.0`.
+
+**Action taken**: This project checked for injected `.claude/settings.json` files (none found). LiteLLM upgraded to `>=1.83.0,<2.0.0` in `packages/llm/pyproject.toml`.
+
+---
+
 ## Out of Scope
 
 - Issues that require physical access to the Jetson device

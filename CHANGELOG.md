@@ -10,6 +10,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `CLAUDE.md` (project root): comprehensive Claude Code guide — architecture, key files, running, testing, deployment, known constraints, and per-change conventions.
 - `.pre-commit-config.yaml`: ruff + ruff-format + pre-commit-hooks run automatically on every commit.
 - `.github/dependabot.yml`: weekly grouped dependency PRs; LiteLLM pinned exception documented.
 - `.github/workflows/release.yml`: tag `vX.Y.Z` → GitHub Release with CHANGELOG entry extracted automatically.
@@ -19,6 +20,9 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 - `uv.lock` removed from `.gitignore` — lock file is now committed for reproducible builds.
+- `litellm` unpinned from `1.82.6` — upgraded to `>=1.83.0,<2.0.0`, skipping the compromised 1.82.7/1.82.8 range. See `SECURITY.md` for incident details.
+- `dependabot.yml` LiteLLM ignore exception removed — future upgrades are welcome.
+- `SECURITY.md` updated with the March 2026 supply chain incident (`.claude/settings.json` injection attack).
 
 ---
 
