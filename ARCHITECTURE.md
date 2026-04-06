@@ -64,7 +64,8 @@ JETSON ORIN NANO 8GB
   Shared: LanceDB · Mem0 · structlog · SQLite · APScheduler
 
          │ (generation via LiteLLM — free tiers only)
-  Groq → Gemini Flash → Cerebras → Mistral  (priority order, failover)
+  Groq → Gemini → Cerebras → Mistral → Ollama  (priority order, failover)
+  Structured calls: Gemini only (others return free-text, not tool calls)
 ```
 
 **Key numbers:**
@@ -291,14 +292,19 @@ APScheduler jobs call `run_turn()` directly with a `schedule_trigger` kwarg. The
 
 ### Provider priority
 
-```
-Groq (llama-3.3-70b-versatile)
-  → Gemini Flash (gemini-1.5-flash)
-    → Cerebras (llama3.1-70b)
-      → Mistral (mistral-large-latest)
-```
+| Priority | Provider | Model | Structured? | Notes |
+|----------|----------|-------|-------------|-------|
+| 1 | Groq | `llama-4-scout-17b-16e-instruct` | No | Free-text only — fastest for unstructured |
+| 2 | Gemini | `gemini-2.5-flash` | **Yes** | Sole structured provider |
+| 3 | Cerebras | `llama3.3-70b` | No | Model 404 — fast-fails, preserved for future |
+| 4 | Mistral | `mistral-small-latest` | No | Free-text only — 33M daily token cap |
+| 5 | Ollama | `qwen3:0.6b` | No | Local fallback — never fails |
 
-Only providers with a non-empty API key are included. `active_llm_providers()` in `Settings` builds the list at runtime.
+**Unstructured chain** (`complete()`, `stream()`): all providers, Groq first.
+
+**Structured chain** (`complete_structured()`): Gemini only. Groq, Cerebras, and Mistral have `supports_structured=False` — they return free-text instead of tool calls, which `instructor`'s `parse_tools` assertion cannot handle. If Gemini is rate-limited, `complete_structured()` returns `None` and callers fall back to `complete()`.
+
+Only providers with a non-empty API key are attempted at runtime.
 
 ### Retry and failover
 

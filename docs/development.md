@@ -280,6 +280,12 @@ journalctl -u telegram-bot | grep '"component":"career"'
 
 ---
 
+## Troubleshooting
+
+Common deployment errors and their fixes are documented in [Troubleshooting](troubleshooting.md).
+
+---
+
 ## Conventional Commits
 
 ```

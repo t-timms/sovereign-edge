@@ -1,214 +1,201 @@
 # Architecture
 
-## Overview
+> Quick-reference overview. For full design rationale, memory layer specs, HITL internals, and testing strategy, see [ARCHITECTURE.md](../ARCHITECTURE.md).
 
-Sovereign Edge is a monorepo of Python packages wired together into a single async service. The Telegram and Discord bots are the entry points; either can be used independently. Requests flow through an intent router, are dispatched to an expert, grounded with live data, processed through the LLM gateway, and returned — with every call traced to SQLite.
+---
 
-The system is designed around two principles: **graceful degradation** (every layer has a fallback) and **privacy by default** (PII is detected before routing and kept local).
+## Two Principles
 
-Each expert is a LangGraph subgraph with its own multi-node pipeline. A director graph coordinates multi-expert chains for queries that span domains.
+**Graceful degradation** — every layer has a fallback. ONNX router unavailable → keyword classifier. Cloud LLMs exhausted → local Ollama. LangGraph not installed → direct gateway call. Jina 422 → empty context (LLM answers from knowledge).
+
+**Privacy by default** — PII is detected before routing. If found, the request is forced to local inference (`RoutingDecision.LOCAL`). No external API call is made.
 
 ---
 
 ## Request Flow
 
-```
-User message (Telegram or Discord)
-    │
-    ├─ Input validation: length cap (2000 chars), rate limit (2s/chat)
-    │
-    ▼
-PIIDetector.contains_pii()
-    ├─ PII found → RoutingDecision.LOCAL (Ollama only, no external calls)
-    └─ No PII → RoutingDecision.CLOUD
-    │
-    ▼
-IntentRouter.aroute()  [3-tier classification]
-    1. Embedding cosine similarity (Ollama embeddings vs. prototype sentences)
-       └─ score ≥ 0.45 → use this result
-    2. ONNX DistilBERT classifier (if model loaded)
-    3. Keyword matching (weighted, multi-word keys first)
-    │
-    ▼
-Orchestrator.dispatch()
-    ├─ Inject conversation history (last 8 turns from SQLite)
-    ├─ Semantic cache lookup (cosine similarity ≥ 0.92 → return cached)
-    │   └─ Cache skipped for INTELLIGENCE — always needs live papers
-    └─ Route to expert by intent (via DirectorGraph if enabled)
-    │
-    ▼
-Expert LangGraph subgraph
-    Intelligence:  arxiv_fetcher ─┐
-                   hf_fetcher   ──┴─► ranker ──► synthesizer
-    Career:        job_searcher ──► strategist
-    Creative:      trend_researcher ──► writer
-    Spiritual:     scripture_fetcher ──► theologian
-    (each subgraph falls back to a direct gateway call if LangGraph unavailable)
-    │
-    ▼
-LLMGateway.complete()
-    Groq → Gemini → Cerebras → Mistral → Ollama (local fallback)
-    Each provider: token-bucket RPM check → daily token cap check → call with retry
-    │
-    ▼
-Orchestrator (post-dispatch)
-    ├─ Store response in semantic cache
-    ├─ Append turn to conversation history
-    └─ Record trace (model, expert, tokens, latency, cost)
-    │
-    ▼
-Reply (chunked at 4000 chars for Telegram, 2000 chars for Discord)
+```mermaid
+flowchart TD
+    A["User message\n(Telegram / Discord)"] --> VAL
+
+    subgraph input ["Input Layer"]
+        VAL["Auth check\nRate limit · 2000-char cap"]
+    end
+
+    VAL --> PII
+
+    subgraph route ["Intent Router · &lt;10ms"]
+        PII["PII detected?"]
+        PII -->|Yes| LOCAL["RoutingDecision.LOCAL\n(Ollama only)"]
+        PII -->|No| T1["Tier 1: Embedding similarity\n(Ollama cosine ≥ 0.45)"]
+        T1 -->|Low confidence| T2["Tier 2: ONNX DistilBERT\n(INT8, 6-class)"]
+        T2 -->|No model| T3["Tier 3: Keyword matching\n(weighted, multi-word first)"]
+    end
+
+    LOCAL & T1 & T2 & T3 --> ORCH
+
+    subgraph orch ["Orchestrator"]
+        ORCH["Director LangGraph\nplan → execute → merge"]
+    end
+
+    ORCH --> EXP
+
+    subgraph experts ["Expert Subgraphs"]
+        EXP["Dispatch by intent"]
+        EXP --> SP["Spiritual\nscripture_fetcher → theologian"]
+        EXP --> CA["Career\njob_searcher → strategist"]
+        EXP --> IN["Intelligence\narxiv + hf (parallel) → ranker → synthesizer"]
+        EXP --> CR["Creative\ntrend_researcher → writer"]
+        EXP --> GO["Goals\ngoal_loader → responder"]
+    end
+
+    SP & CA & IN & CR & GO --> GW
+
+    subgraph gateway ["LLM Gateway"]
+        GW["Groq → Gemini → Mistral\n→ Ollama fallback"]
+    end
+
+    GW --> MEM
+
+    subgraph memory ["Memory"]
+        MEM["Semantic cache · Conversation history\nEpisodic (Mem0) · Skill library"]
+    end
+
+    MEM --> OUT["Reply\n(chunked at 4000 chars)"]
 ```
 
 ---
 
 ## LLM Gateway
 
-The gateway (`packages/llm`) wraps LiteLLM as a library (not a proxy) and manages a priority-ordered provider chain. It exposes two completion methods:
+The gateway (`packages/llm`) wraps LiteLLM and manages a priority-ordered provider chain with per-provider token buckets, daily token caps, and exponential backoff.
 
-- `complete()` — standard text completion, returns `str`. Falls back to local Ollama if all cloud providers fail or none are configured — never raises.
-- `complete_structured(response_model)` — instructor-wrapped completion, returns a validated Pydantic model. Used by career (`JobListingResponse`) and intelligence (`IntelBriefResponse`) to guarantee output format across all providers. Falls back to `None` on failure; callers then use `complete()`.
+### Provider chain
 
+| Priority | Provider | Model | RPM | Daily Tokens | Structured? |
+|----------|----------|-------|-----|-------------|-------------|
+| 1 | Groq | `llama-4-scout-17b-16e-instruct` | 30 | 500K | No — free-text only |
+| 2 | Gemini | `gemini-2.5-flash` | 15 | 250K | **Yes** |
+| 3 | Cerebras | `llama3.3-70b` | 30 | 1M | No — model 404 |
+| 4 | Mistral | `mistral-small-latest` | 2 | 33M | No — free-text only |
+| 5 | Ollama | `qwen3:0.6b` (local) | ∞ | ∞ | No |
 
-### Fallback Chain
+**Unstructured** (`complete()`, `stream()`): full chain — Groq first, fastest for conversational queries.
 
-| Priority | Provider | Model | RPM | Daily Tokens |
-|---|---|---|---|---|
-| 1 | Groq | `meta-llama/llama-4-scout-17b-16e-instruct` | 30 | 500K |
-| 2 | Gemini | `gemini-2.5-flash` | 15 | 250K |
-| 3 | Cerebras | `llama-3.3-70b` | 30 | 1M |
-| 4 | Mistral | `mistral-small-latest` | 2 | 33M |
-| 5 | Ollama | `qwen3:0.6b` (local) | unlimited | unlimited |
+**Structured** (`complete_structured()`): Gemini only. Groq, Cerebras, and Mistral return free-text instead of tool calls for complex prompts. If Gemini is rate-limited, the caller falls back to `complete()`.
 
-### Rate Limiting
+### Error handling
 
-Each provider has an independent token bucket. The bucket refills at `rpm / 60` tokens per second and holds a maximum of `rpm` tokens (one minute burst). If a provider's bucket is empty or its daily token cap is reached, the gateway skips it and tries the next.
-
-### Error Handling
-
-| Error | Behavior |
-|---|---|
-| `RateLimitError` | Exponential backoff (1s, 2s, 4s), then skip provider |
-| `ServiceUnavailableError` | Exponential backoff, then skip provider |
-| `AuthenticationError` | Skip provider immediately (bad API key) |
-| `BadRequestError` | Skip provider immediately |
-| `TimeoutError` | Exponential backoff, then skip provider |
-| All providers fail | Fall back to local Ollama |
-
-The gateway is a module-level singleton (`get_gateway()`). Direct instantiation bypasses rate limiting state.
+```
+RateLimitError      → exponential backoff (1s → 2s → 4s), then skip
+ServiceUnavailable  → exponential backoff, then skip
+AuthenticationError → skip immediately
+TimeoutError        → backoff, then skip (hard limit: 30s per attempt)
+All providers fail  → Ollama local fallback (never raises)
+```
 
 ---
 
 ## Intent Router
 
-The router (`packages/router`) classifies each message into one of five intents: `SPIRITUAL`, `CAREER`, `INTELLIGENCE`, `CREATIVE`, `GENERAL`.
+Three-tier classification with automatic tier fallback:
 
-### Three-Tier Classification
+```mermaid
+flowchart LR
+    Q["Query"] --> T1
 
-**Tier 1 — Embedding similarity (async):**
-The query is embedded with Ollama (`qwen3-embedding:0.6b`) and scored against prototype sentences for each intent via cosine similarity. If the best score exceeds 0.45, this result is used. Falls back to Tier 2 on Ollama failure.
+    T1["Tier 1\nOllama embeddings\ncosine similarity"]
+    T1 -->|score ≥ 0.45| R["IntentClass + confidence"]
+    T1 -->|score &lt; 0.45 or Ollama down| T2
 
-**Tier 2 — ONNX DistilBERT (sync):**
-A fine-tuned DistilBERT model served via ONNX runtime. Loaded at startup from `data/models/router.onnx`. If the model file is absent, skips to Tier 3.
+    T2["Tier 2\nONNX DistilBERT INT8\n6-class classifier"]
+    T2 -->|model loaded| R
+    T2 -->|no model file| T3
 
-**Tier 3 — Keyword matching (sync):**
-Weighted keyword matching. Multi-word keys are checked before single-word keys. Confidence is derived from match weight. If no keywords match, returns `Intent.GENERAL` at 0.5 confidence.
+    T3["Tier 3\nKeyword matching\nweighted multi-word"]
+    T3 --> R
+```
 
-### PII Routing
+**6 classes:** `SPIRITUAL` · `CAREER` · `INTELLIGENCE` · `CREATIVE` · `GOALS` · `GENERAL`
 
-PII detection runs before classification. If SSN, credit card, email, phone, or IP address patterns are detected, the routing decision is forced to `LOCAL` regardless of intent. No external API calls are made.
+Low-confidence `GENERAL` classifications (≤ 0.55) are flagged — the orchestrator can prompt for clarification.
 
 ---
 
 ## Expert Subgraphs
 
-Each expert is a compiled LangGraph `StateGraph`. The expert's `process()` method delegates to its subgraph and only falls back to a direct `LLMGateway.complete()` call if LangGraph is not installed.
+Each expert is a compiled LangGraph `StateGraph`. If LangGraph is unavailable, each falls back to a direct `gateway.complete()` call.
 
-| Expert | Subgraph pipeline |
-|---|---|
-| **Intelligence** | `arxiv_fetcher` + `hf_fetcher` (parallel) → `ranker` (FlashRank + repo scoring) → `synthesizer` (`IntelBriefResponse`) |
-| **Career** | `job_searcher` (Jina + DFW filter) → `strategist` (`JobListingResponse`) |
-| **Creative** | `trend_researcher` (Jina live search) → `writer` (LLM generation) |
-| **Spiritual** | `scripture_fetcher` (Bible API) → `theologian` (LLM devotional) |
+| Expert | Subgraph Pipeline | Live Data |
+|--------|------------------|-----------|
+| **Spiritual** | `scripture_fetcher` → `theologian` | bible-api.com (KJV) |
+| **Career** | `job_searcher` → `strategist` (structured) | Jina semantic search |
+| **Intelligence** | `arxiv_fetcher` ‖ `hf_fetcher` → `ranker` → `synthesizer` (structured) | arXiv Atom API, HuggingFace Hub |
+| **Creative** | `trend_researcher` → `writer` | Jina semantic search |
+| **Goals** | `goal_loader` → `responder` | SQLite goal store |
 
-The Intelligence subgraph runs `arxiv_fetcher` and `hf_fetcher` in the same LangGraph superstep (true parallel execution). Both fetchers write to a shared `raw_papers` list via `operator.add` merge, then `ranker` waits for both before scoring.
-
-**Repo-relevance scoring:** The `ranker` node scores each paper against `SE_REPO_TOPICS` keywords and annotates matching papers with repo names. These appear in the brief as `→ repo-name` tags, surfacing papers that could directly advance your local projects.
-
-**Structured output:** The `synthesizer` (intelligence) and `strategist` (career) nodes use `gateway.complete_structured()` with instructor-enforced Pydantic models. This guarantees consistent formatting — numbered lists, proper links, DFW location validation — regardless of which cloud provider handles the request. Both fall back to unstructured `complete()` if structured output fails.
+The Intelligence subgraph runs `arxiv_fetcher` and `hf_fetcher` as a true parallel superstep in LangGraph — both results are merged before the `ranker` runs. Papers are scored against your active repos via `SE_REPO_TOPICS`.
 
 ---
 
 ## Director Graph
 
-The director (`agents/director/`) is a LangGraph `StateGraph` that enables multi-expert chaining — queries that span more than one domain. It uses a plan-and-execute pattern:
+For queries spanning multiple domains, the director (`agents/orchestrator/`) runs a plan → execute → merge pipeline:
 
 ```
-plan    — LLM decides which experts to invoke and in what order
-execute — runs each expert subgraph in sequence
-merge   — combines multi-expert outputs into a single response (when > 1 expert)
+plan    — LLM identifies required experts and their order
+execute — each expert subgraph runs in sequence
+merge   — combines outputs into one response (only when > 1 expert)
 ```
 
-**Example multi-expert queries:**
-- *"Research the latest GRPO papers and write a LinkedIn post about them"* → Intelligence → Creative
-- *"Find ML engineer jobs at companies working on inference optimization"* → Intelligence → Career
+Single-expert queries resolve directly — no overhead.
 
-Single-expert queries resolve to one node with zero overhead — the director is not a bottleneck for normal use. The orchestrator enables the director via `Orchestrator(use_director=True)`.
+**Example:** *"Research GRPO papers and write a LinkedIn post about them"* → Intelligence → Creative
 
 ---
 
 ## Memory Layers
 
-### Conversation History
-SQLite database (WAL mode). Stores up to 40 turns per `chat_id`. The 8 most recent turns are injected into every request as prior message context, giving experts short-term conversational memory.
-
-### Semantic Cache
-LanceDB vector store. After every cloud LLM call, the query and response are stored with their embedding vector. On subsequent requests, the query is embedded and searched for cosine similarity ≥ 0.92. A cache hit returns the stored response without calling the LLM. Cache entries expire after 24 hours.
-
-### Episodic Memory (optional)
-Long-term episodic memory via Mem0. Requires the `mem0ai` optional dependency. Extracts and stores facts from conversations, searchable by semantic similarity. Silently disabled when the dependency is unavailable.
+| Layer | Store | Lifetime | Purpose |
+|-------|-------|----------|---------|
+| Conversation history | SQLite (WAL) | 40 turns / chat | Short-term conversational context |
+| Semantic cache | LanceDB | 24 hours | Skip LLM call for similar queries (cosine ≥ 0.92) |
+| Episodic memory | Mem0 (optional) | Persistent | Cross-session fact recall ("you mentioned X last week") |
+| Skill library | SQLite (WAL) | Persistent | Reinforce effective patterns per intent |
 
 ---
 
 ## Morning Pipeline
 
-The orchestrator uses APScheduler to fire seven cron jobs per day. Times are relative to `SE_MORNING_WAKE_HOUR` in the `SE_TIMEZONE` timezone (default: 05:00 US/Central):
-
 ```
-05:00  _morning_health_check    All experts pinged in parallel
-05:15  _spiritual_brief         Live Bible verse → morning devotional
-05:30  _intelligence_brief      arXiv + HuggingFace papers → digest
-06:00  _career_brief            Job market search → actionable brief
-07:00  _creative_brief          Trend context → daily creative prompt
-07:30  _goals_brief             Top 3 urgent goals + action item
-18:00  _career_rescan_brief     Evening job scan
+05:00  Health check      — all experts pinged in parallel
+05:15  Spiritual brief   — live scripture + morning devotional
+05:30  Intelligence      — arXiv + HuggingFace digest
+06:00  Career            — live job market scan
+07:00  Creative          — daily content prompt
+07:30  Goals             — top 3 urgent + one concrete action
+18:00  Career rescan     — evening job scan
 ```
 
-Each step calls `expert.morning_brief()` with a 90-second timeout. Output is chunked at 4000 characters and pushed to the owner's Telegram chat via `send_message()`.
+APScheduler `AsyncIOScheduler`. Timezone: `SE_TIMEZONE` (default `US/Central`). Each job has a 90-second `asyncio.timeout`. `misfire_grace_time=300` tolerates up to 5 minutes of host sleep.
 
 ---
 
-## Observability
+## Security Summary
 
-Every completed task is recorded to a SQLite trace store (WAL mode) with:
-
-- `task_id`, `timestamp`, `expert`, `model`
-- `tokens_in`, `tokens_out`, `latency_ms`, `cost_usd`
-- `cached` (bool), `routing` (LOCAL/CLOUD/CACHE), `status`, `error_message`
-
-The `/stats` Telegram command queries today's aggregated totals: requests, cache hits, errors, average latency, total tokens, total cost, and models used.
-
-Structured logging uses structlog with JSON output in production. Every log line carries `component`, `expert`, and `model` context fields for filtering.
+| Control | Implementation |
+|---------|---------------|
+| Authentication | `SE_TELEGRAM_OWNER_CHAT_ID` whitelist — all handlers validate before processing |
+| Rate limiting | 2s per-chat cooldown via `time.monotonic()` |
+| Input cap | 2000-char truncation before routing |
+| PII guard | Regex + spaCy detection → forced `LOCAL` routing |
+| SSRF guard | Jina `fetch()` rejects RFC 1918 / loopback addresses (fail-closed on DNS error) |
+| Prompt injection | User input wrapped in `<user_request>` delimiters; never concatenated into system role |
+| Output validation | `instructor` + Pydantic enforces response schema on all structured calls |
+| Supply chain | LiteLLM pinned to `1.82.6`; HuggingFace tokenizer pinned to local directory |
+| Secrets | SOPS + Age — encrypted secrets committed to git; decrypted at service start only |
+| Single instance | `fcntl.flock(LOCK_EX \| LOCK_NB)` on `/tmp/sovereign-edge-telegram.lock` |
 
 ---
 
-## Security
-
-- **Auth:** All Telegram commands and messages validate `chat_id` against `SE_TELEGRAM_OWNER_CHAT_ID`. Unauthorized attempts are logged at CRITICAL.
-- **Rate limiting:** Per-chat 2-second cooldown prevents request flooding.
-- **Input cap:** Messages truncated at 2000 characters before processing.
-- **PII guard:** PII detected → forced local routing, no external API calls.
-- **SSRF guard:** Jina `fetch()` rejects URLs resolving to RFC 1918 / loopback addresses (fail-closed on DNS error).
-- **Prompt injection:** User input is wrapped in `<user_request>` XML delimiters in all expert prompts.
-- **Secrets:** SOPS Age encryption. Decrypted to a `600`-permission file at service startup only.
-- **Supply chain:** HuggingFace model pinned to a specific commit hash. LiteLLM pinned to 1.82.6.
+For the complete architecture reference including repository layout, HITL internals, testing strategy, and full design decision rationale, see [ARCHITECTURE.md](../ARCHITECTURE.md).
