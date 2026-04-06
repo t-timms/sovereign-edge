@@ -18,11 +18,28 @@ secrets/.env.decrypted
 # Private identity document
 SOUL.md
 
-# Data (too large for git)
+# Data (too large for git — never commit model weights or training data)
 data/stepbible/
 data/tsk/
-data/models/*.onnx
-data/models/*.gguf
+data/models/
+data/*.jsonl
+data/*.parquet
+data/*.arrow
+# Model weight formats
+*.safetensors
+*.gguf
+*.onnx
+*.onnx.data
+*.pt
+*.pth
+*.bin
+# Training checkpoints
+checkpoint-*/
+optimizer.pt
+scheduler.pt
+rng_state.pth
+trainer_state.json
+training_args.bin
 
 # Logs
 logs/
