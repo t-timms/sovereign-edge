@@ -15,7 +15,10 @@ Commands:
 from __future__ import annotations
 
 import asyncio
+import fcntl
 import functools
+import os
+import sys
 import time
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -613,7 +616,13 @@ async def _run() -> None:
     from spiritual.expert import SpiritualExpert
 
     orch = Orchestrator(use_director=True)
-    for expert in (SpiritualExpert(), CareerExpert(), IntelligenceExpert(), CreativeExpert(), GoalExpert()):  # noqa: E501
+    for expert in (
+        SpiritualExpert(),
+        CareerExpert(),
+        IntelligenceExpert(),
+        CreativeExpert(),
+        GoalExpert(),
+    ):
         orch.register(expert)
 
     bot = SovereignEdgeBot(orch)
@@ -633,8 +642,33 @@ async def _run() -> None:
         await orch.stop()
 
 
+_LOCK_PATH = "/tmp/sovereign-edge-telegram.lock"  # noqa: S108
+
+
 def main() -> None:
+    """Entry point with single-instance guard via OS-level flock.
+
+    A second invocation will immediately exit rather than running a duplicate
+    bot. The lock is released automatically when the process exits (including
+    crashes and SIGKILL), so there is no stale-lock risk.
+    """
+    lock_fh = open(_LOCK_PATH, "w")
+    try:
+        fcntl.flock(lock_fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        print(
+            f"sovereign-edge-telegram already running (lock held: {_LOCK_PATH}). "
+            "Exiting to prevent duplicate bot.",
+            file=sys.stderr,
+        )
+        lock_fh.close()
+        sys.exit(1)
+
+    lock_fh.write(str(os.getpid()))
+    lock_fh.flush()
+
     asyncio.run(_run())
+    # Lock released when process exits and lock_fh is closed by the OS
 
 
 if __name__ == "__main__":
