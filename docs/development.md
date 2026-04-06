@@ -15,7 +15,7 @@ Local setup, code quality tooling, testing, and contribution guidelines.
 ### Install
 
 ```bash
-git clone https://github.com/your-username/sovereign-edge.git
+git clone https://github.com/omnipotence-eth/sovereign-edge.git
 cd sovereign-edge
 uv sync --all-packages
 ```
@@ -31,9 +31,9 @@ cp .env.example .env   # or create .env manually
 Minimum for local development:
 
 ```bash
-SE_TELEGRAM_BOT_TOKEN=your_token
-SE_TELEGRAM_OWNER_CHAT_ID=your_chat_id
-SE_GROQ_API_KEY=gsk_...          # or any single cloud key
+SE_TELEGRAM_BOT_TOKEN=<your_bot_token>
+SE_TELEGRAM_OWNER_CHAT_ID=<your_numeric_chat_id>
+SE_GROQ_API_KEY=<gsk_...>        # or any single cloud key
 SE_OLLAMA_HOST=http://localhost:11434
 ```
 

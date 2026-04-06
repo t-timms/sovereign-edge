@@ -1,6 +1,6 @@
 [Unit]
 Description=Sovereign Edge Telegram Bot
-Documentation=https://github.com/YOUR_GITHUB_USERNAME/sovereign-edge
+Documentation=https://github.com/omnipotence-eth/sovereign-edge
 After=network-online.target ollama.service
 Wants=network-online.target
 PartOf=ai-stack.target

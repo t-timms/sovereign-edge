@@ -46,9 +46,9 @@ cp .env.example .env
 Minimum `.env` for local development:
 
 ```bash
-SE_TELEGRAM_BOT_TOKEN=your_token
-SE_TELEGRAM_OWNER_CHAT_ID=your_chat_id
-SE_GROQ_API_KEY=gsk_...
+SE_TELEGRAM_BOT_TOKEN=<your_bot_token>
+SE_TELEGRAM_OWNER_CHAT_ID=<your_numeric_chat_id>
+SE_GROQ_API_KEY=<gsk_...>
 SE_OLLAMA_HOST=http://localhost:11434
 ```
 

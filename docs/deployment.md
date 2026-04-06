@@ -50,8 +50,8 @@ ollama pull qwen3-embedding:0.6b
 ### 4. Clone the repository
 
 ```bash
-# Replace YOUR_USER with your Linux username
-git clone https://github.com/YOUR_GITHUB_USERNAME/sovereign-edge.git ~/sovereign-edge
+# Replace placeholders with your Linux username and repo path
+git clone https://github.com/omnipotence-eth/sovereign-edge.git ~/sovereign-edge
 cd ~/sovereign-edge
 ```
 
@@ -101,19 +101,19 @@ Copy the public key from the output (starts with `age1...`).
 On your development machine, create `secrets/env.yaml`:
 
 ```yaml
-SE_TELEGRAM_BOT_TOKEN: your_bot_token
-SE_TELEGRAM_OWNER_CHAT_ID: "your_chat_id"
-SE_GROQ_API_KEY: gsk_...
-SE_GOOGLE_API_KEY: AIza...
-SE_CEREBRAS_API_KEY: csk_...
-SE_MISTRAL_API_KEY: ...
+SE_TELEGRAM_BOT_TOKEN: <your_bot_token>
+SE_TELEGRAM_OWNER_CHAT_ID: "<your_numeric_chat_id>"
+SE_GROQ_API_KEY: <gsk_...>
+SE_GOOGLE_API_KEY: <AIza...>
+SE_CEREBRAS_API_KEY: <csk_...>
+SE_MISTRAL_API_KEY: <your_mistral_key>
 SE_SSD_ROOT: /mnt/ssd/sovereign-edge-data
 ```
 
 Encrypt it with your public key:
 
 ```bash
-sops --encrypt --age age1YOUR_PUBLIC_KEY secrets/env.yaml > secrets/env.yaml.enc
+sops --encrypt --age <age1_your_public_key> secrets/env.yaml > secrets/env.yaml.enc
 mv secrets/env.yaml.enc secrets/env.yaml
 ```
 
@@ -126,7 +126,7 @@ Create `.sops.yaml` at the project root to configure key discovery:
 ```yaml
 creation_rules:
   - path_regex: secrets/.*\.yaml$
-    age: age1YOUR_PUBLIC_KEY
+    age: <age1_your_public_key>
 ```
 
 ---
@@ -189,7 +189,7 @@ Export these environment variables (add to your shell profile):
 
 ```bash
 export DEPLOY_HOST=<your-device-ip-or-hostname>   # Tailscale IP, local IP, or hostname
-export DEPLOY_USER=<your-username>                 # Linux username on the target device
+export DEPLOY_USER=<your_linux_username>           # Linux username on the target device
 ```
 
 Then deploy:

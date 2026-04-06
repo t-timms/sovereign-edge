@@ -37,3 +37,9 @@ logs/
 .DS_Store
 Thumbs.db
 .claude/
+
+# Tooling caches
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.ty_cache/

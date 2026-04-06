@@ -194,8 +194,8 @@ The full morning pipeline schedule fires at offsets from `SE_MORNING_WAKE_HOUR`.
 
 ```bash
 # Telegram
-SE_TELEGRAM_BOT_TOKEN=your_bot_token_here
-SE_TELEGRAM_OWNER_CHAT_ID=your_chat_id_here
+SE_TELEGRAM_BOT_TOKEN=<your_bot_token>
+SE_TELEGRAM_OWNER_CHAT_ID=<your_numeric_chat_id>
 
 # Cloud LLM keys (all free tier)
 SE_GROQ_API_KEY=gsk_...
