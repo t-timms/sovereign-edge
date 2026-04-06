@@ -108,7 +108,7 @@ class GoalStore:
         return goal_id  # type: ignore[return-value]
 
     def update_progress(self, goal_id: int, pct: int) -> None:
-        """Set progress percentage (clamped to 0–100)."""
+        """Set progress percentage (clamped to 0-100)."""
         clamped = max(0, min(100, pct))
         now = datetime.now(UTC).isoformat()
         with self._lock, self._connect() as conn:

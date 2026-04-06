@@ -34,9 +34,11 @@ def get_stats() -> dict[str, Any]:
 
         stats = TraceStore().get_daily_stats()
         return stats or {}
-    except Exception:
+    except Exception as exc:
         logger.warning("dashboard_stats_failed", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Stats unavailable")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Stats unavailable"
+        ) from exc
 
 
 @_API.get("/memory")

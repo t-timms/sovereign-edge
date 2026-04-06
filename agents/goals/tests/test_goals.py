@@ -114,7 +114,13 @@ async def test_morning_brief_formats_goals(tmp_path: Path) -> None:
 
     mock_gateway = MagicMock()
     mock_gateway.complete = AsyncMock(
-        return_value={"content": "Apply to 3 jobs on LinkedIn today.", "model": "test", "tokens_in": 10, "tokens_out": 10, "cost_usd": 0.0}
+        return_value={
+            "content": "Apply to 3 jobs on LinkedIn today.",
+            "model": "test",
+            "tokens_in": 10,
+            "tokens_out": 10,
+            "cost_usd": 0.0,
+        }
     )
 
     expert = GoalExpert()

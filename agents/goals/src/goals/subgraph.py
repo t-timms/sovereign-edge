@@ -40,13 +40,13 @@ class GoalState(TypedDict):
     query: str
     routing: str
     # ── Intermediate ──────────────────────────────────────────────────────
-    action: str          # "add" | "update" | "list" | "complete" | "unknown"
+    action: str  # "add" | "update" | "list" | "complete" | "unknown"
     goal_id: int | None
     title: str
     description: str
     target_date: str | None
     progress: int
-    store_result: str    # human-readable result from GoalStore operation
+    store_result: str  # human-readable result from GoalStore operation
     # ── Outputs ───────────────────────────────────────────────────────────
     response: str
     model_used: str
@@ -163,7 +163,13 @@ async def _llm_formatter(state: GoalState) -> dict[str, Any]:
             "• *complete goal #2* — mark done\n"
             "• *list goals* — see all active goals"
         )
-        return {"response": usage, "model_used": "none", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}
+        return {
+            "response": usage,
+            "model_used": "none",
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "cost_usd": 0.0,
+        }
 
     messages = [
         {

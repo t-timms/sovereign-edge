@@ -76,7 +76,13 @@ async def _main_async(args: argparse.Namespace) -> None:
     from voice.pipeline import VoicePipeline
 
     orch = Orchestrator()
-    for expert in (SpiritualExpert(), CareerExpert(), IntelligenceExpert(), CreativeExpert(), GoalExpert()):
+    for expert in (
+        SpiritualExpert(),
+        CareerExpert(),
+        IntelligenceExpert(),
+        CreativeExpert(),
+        GoalExpert(),
+    ):
         orch.register(expert)
     await orch.start()
 

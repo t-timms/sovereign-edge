@@ -51,7 +51,7 @@ _orchestrator: Any = None
 _router: Any = None
 
 
-def _get_orchestrator() -> Any:
+def _get_orchestrator() -> object:
     global _orchestrator, _router
     if _orchestrator is None:
         from career.expert import CareerExpert
@@ -63,7 +63,13 @@ def _get_orchestrator() -> Any:
         from spiritual.expert import SpiritualExpert
 
         orch = Orchestrator()
-        for expert in (SpiritualExpert(), CareerExpert(), IntelligenceExpert(), CreativeExpert(), GoalExpert()):
+        for expert in (
+            SpiritualExpert(),
+            CareerExpert(),
+            IntelligenceExpert(),
+            CreativeExpert(),
+            GoalExpert(),
+        ):
             orch.register(expert)
         _orchestrator = orch
         _router = IntentRouter()
@@ -101,7 +107,7 @@ def _split(text: str, size: int) -> list[str]:
         if split_at > 0 and len(text) > size:
             chunk = text[:split_at]
         chunks.append(chunk.strip())
-        text = text[len(chunk):].strip()
+        text = text[len(chunk) :].strip()
     return chunks
 
 

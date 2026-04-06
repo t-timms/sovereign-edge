@@ -40,7 +40,7 @@ _orchestrator: Any = None
 _VALID_EXPERTS = {e.value for e in ExpertName}
 
 
-def _get_orchestrator() -> Any:
+def _get_orchestrator() -> object:
     global _orchestrator
     if _orchestrator is None:
         from career.expert import CareerExpert
@@ -51,7 +51,13 @@ def _get_orchestrator() -> Any:
         from spiritual.expert import SpiritualExpert
 
         orch = Orchestrator()
-        for expert in (SpiritualExpert(), CareerExpert(), IntelligenceExpert(), CreativeExpert(), GoalExpert()):
+        for expert in (
+            SpiritualExpert(),
+            CareerExpert(),
+            IntelligenceExpert(),
+            CreativeExpert(),
+            GoalExpert(),
+        ):
             orch.register(expert)
         _orchestrator = orch
     return _orchestrator
