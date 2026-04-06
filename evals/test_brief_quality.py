@@ -16,6 +16,7 @@ import pytest
 # Helpers (mirrors BriefOutput logic without importing the expert)
 # ---------------------------------------------------------------------------
 
+
 def _has_link(text: str) -> bool:
     return bool(re.search(r"https?://\S+", text))
 
@@ -33,9 +34,22 @@ def _has_hf_link(text: str) -> bool:
 
 
 _DFW_COMPANIES = {
-    "capital one", "at&t", "american airlines", "sabre", "jpmorgan", "chase",
-    "dell", "toyota", "deloitte", "accenture", "lockheed", "raytheon",
-    "amazon", "google", "microsoft", "tesla",
+    "capital one",
+    "at&t",
+    "american airlines",
+    "sabre",
+    "jpmorgan",
+    "chase",
+    "dell",
+    "toyota",
+    "deloitte",
+    "accenture",
+    "lockheed",
+    "raytheon",
+    "amazon",
+    "google",
+    "microsoft",
+    "tesla",
 }
 
 
@@ -47,6 +61,7 @@ def _has_company_name(text: str) -> bool:
 # ---------------------------------------------------------------------------
 # Intelligence brief contracts
 # ---------------------------------------------------------------------------
+
 
 class TestIntelligenceBriefContracts:
     """A valid intelligence brief must have at least one link and be substantive."""
@@ -104,6 +119,7 @@ class TestIntelligenceBriefContracts:
 # Career brief contracts
 # ---------------------------------------------------------------------------
 
+
 class TestCareerBriefContracts:
     """Career briefs should mention at least one company and have a job title."""
 
@@ -131,6 +147,7 @@ class TestCareerBriefContracts:
 # ---------------------------------------------------------------------------
 # Markdown sanitizer contracts (bot.py _sanitize_markdown)
 # ---------------------------------------------------------------------------
+
 
 class TestMarkdownSanitizer:
     """Telegram MarkdownV1 only renders *bold* and _italic_ — verify sanitizer."""
@@ -173,6 +190,7 @@ class TestMarkdownSanitizer:
 # ---------------------------------------------------------------------------
 # Router classifier contracts
 # ---------------------------------------------------------------------------
+
 
 class TestRouterClassifier:
     """Keyword classifier should route clear signals correctly."""

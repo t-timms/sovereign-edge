@@ -1,0 +1,17 @@
+{
+  "router": {
+    "total": 24,
+    "correct": 23,
+    "accuracy": 0.9583333333333334,
+    "confidence_met": 24,
+    "failures": [
+      {
+        "text": "Draft a LinkedIn post about my new GRPO fine-tuning project",
+        "expected": "creative",
+        "got": "career",
+        "conf": 0.5
+      }
+    ],
+    "elapsed_s": 0.142
+  }
+}

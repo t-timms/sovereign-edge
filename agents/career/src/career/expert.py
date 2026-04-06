@@ -50,18 +50,20 @@ class CareerExpert(BaseExpert):
             except (ValueError, TypeError):
                 pass
 
-        result = await career_subgraph.ainvoke({
-            "query": task.content,
-            "routing": task.routing,
-            "history": history,
-            "is_morning_brief": False,
-            "search_results": "",
-            "response": "",
-            "model_used": "",
-            "tokens_in": 0,
-            "tokens_out": 0,
-            "cost_usd": 0.0,
-        })
+        result = await career_subgraph.ainvoke(
+            {
+                "query": task.content,
+                "routing": task.routing,
+                "history": history,
+                "is_morning_brief": False,
+                "search_results": "",
+                "response": "",
+                "model_used": "",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "cost_usd": 0.0,
+            }
+        )
 
         return TaskResult(
             task_id=task.task_id,
@@ -88,6 +90,7 @@ class CareerExpert(BaseExpert):
 
         if task.routing == RoutingDecision.CLOUD:
             from core.config import get_settings
+
             s = get_settings()
             location = s.career_target_location
             year = datetime.date.today().year
@@ -108,14 +111,21 @@ class CareerExpert(BaseExpert):
         messages = [
             {"role": "system", "content": build_system_prompt()},
             *history,
-            {"role": "user", "content": (
-                f"Live search results:\n{search_context}\n\n---\n{user_input}"
-                if search_context else user_input
-            )},
+            {
+                "role": "user",
+                "content": (
+                    f"Live search results:\n{search_context}\n\n---\n{user_input}"
+                    if search_context
+                    else user_input
+                ),
+            },
         ]
 
         result = await gateway.complete(
-            messages=messages, max_tokens=1500, routing=task.routing, expert=self.name,
+            messages=messages,
+            max_tokens=1500,
+            routing=task.routing,
+            expert=self.name,
         )
 
         return TaskResult(
@@ -132,18 +142,20 @@ class CareerExpert(BaseExpert):
 
     async def morning_brief(self) -> str:
         if career_subgraph is not None:
-            result = await career_subgraph.ainvoke({
-                "query": "",
-                "routing": RoutingDecision.CLOUD,
-                "history": [],
-                "is_morning_brief": True,
-                "search_results": "",
-                "response": "",
-                "model_used": "",
-                "tokens_in": 0,
-                "tokens_out": 0,
-                "cost_usd": 0.0,
-            })
+            result = await career_subgraph.ainvoke(
+                {
+                    "query": "",
+                    "routing": RoutingDecision.CLOUD,
+                    "history": [],
+                    "is_morning_brief": True,
+                    "search_results": "",
+                    "response": "",
+                    "model_used": "",
+                    "tokens_in": 0,
+                    "tokens_out": 0,
+                    "cost_usd": 0.0,
+                }
+            )
             return result["response"]
 
         # Fallback
@@ -158,10 +170,14 @@ class CareerExpert(BaseExpert):
         result = await gateway.complete(
             messages=[
                 {"role": "system", "content": build_system_prompt()},
-                {"role": "user", "content": (
-                    f"Live DFW job market results:\n{job_context}\n\n---\n{MORNING_PROMPT}"
-                    if job_context else MORNING_PROMPT
-                )},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Live DFW job market results:\n{job_context}\n\n---\n{MORNING_PROMPT}"
+                        if job_context
+                        else MORNING_PROMPT
+                    ),
+                },
             ],
             max_tokens=250,
             routing=RoutingDecision.CLOUD,
@@ -174,7 +190,8 @@ class CareerExpert(BaseExpert):
             from llm.gateway import get_gateway
 
             result = await get_gateway().complete(
-                messages=[{"role": "user", "content": "ping"}], max_tokens=5,
+                messages=[{"role": "user", "content": "ping"}],
+                max_tokens=5,
             )
             return bool(result.get("content"))
         except Exception:

@@ -86,7 +86,9 @@ class PIIDetector:
         for pii_type, pattern in _PII_PATTERNS:
             if pii_type == "CREDIT_CARD":
                 result = pattern.sub(
-                    lambda m, _t=pii_type: f"[{_t}_REDACTED]" if _luhn_valid(m.group()) else m.group(),
+                    lambda m, _t=pii_type: (
+                        f"[{_t}_REDACTED]" if _luhn_valid(m.group()) else m.group()
+                    ),
                     result,
                 )
             else:

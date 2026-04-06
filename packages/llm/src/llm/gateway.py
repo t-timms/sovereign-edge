@@ -88,11 +88,31 @@ def _build_providers() -> list[ProviderConfig]:
 LOCAL_FALLBACK_MODEL = "ollama/qwen3:0.6b"
 
 # Keywords that signal a complex/technical query — these should use premium providers
-_TECHNICAL_KEYWORDS = frozenset({
-    "arxiv", "paper", "model", "training", "inference", "transformer", "llm",
-    "fine-tun", "embedding", "benchmark", "dataset", "gpu", "cuda", "vram",
-    "grpo", "rlhf", "lora", "qlora", "attention", "quantiz", "research",
-})
+_TECHNICAL_KEYWORDS = frozenset(
+    {
+        "arxiv",
+        "paper",
+        "model",
+        "training",
+        "inference",
+        "transformer",
+        "llm",
+        "fine-tun",
+        "embedding",
+        "benchmark",
+        "dataset",
+        "gpu",
+        "cuda",
+        "vram",
+        "grpo",
+        "rlhf",
+        "lora",
+        "qlora",
+        "attention",
+        "quantiz",
+        "research",
+    }
+)
 
 
 def _is_simple_query(messages: list[dict[str, str]]) -> bool:
@@ -101,9 +121,7 @@ def _is_simple_query(messages: list[dict[str, str]]) -> bool:
     Mistral has 33M TPD free — routing simple queries there preserves Groq/Gemini
     capacity for complex intelligence and career work.
     """
-    last_user = next(
-        (m["content"] for m in reversed(messages) if m.get("role") == "user"), ""
-    )
+    last_user = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
     if len(last_user) > 250:
         return False
     lower = last_user.lower()
@@ -227,7 +245,9 @@ class LLMGateway:
                 logger.debug("provider_rpm_limited model=%s", provider.model)
                 continue
 
-            result = await self._call_with_retry(provider, messages, max_tokens, temperature, expert)
+            result = await self._call_with_retry(
+                provider, messages, max_tokens, temperature, expert
+            )
             if result is not None:
                 return result
 
@@ -286,7 +306,10 @@ class LLMGateway:
                 self.tracker.add(provider.model, tokens_in + tokens_out)
                 logger.info(
                     "stream_response model=%s expert=%s tokens_in=%d tokens_out=%d",
-                    provider.model, expert, tokens_in, tokens_out,
+                    provider.model,
+                    expert,
+                    tokens_in,
+                    tokens_out,
                 )
                 return  # success — do not try next provider
 
@@ -378,13 +401,17 @@ class LLMGateway:
                 elapsed = (time.monotonic() - start) * 1000
                 logger.info(
                     "structured_response model=%s expert=%s latency_ms=%.1f",
-                    provider.model, expert, elapsed,
+                    provider.model,
+                    expert,
+                    elapsed,
                 )
                 return result
 
             except litellm.RateLimitError:  # type: ignore[attr-defined]
                 delay = _RETRY_BASE_DELAY * (2**attempt)
-                logger.warning("structured_rate_limited model=%s attempt=%d", provider.model, attempt + 1)
+                logger.warning(
+                    "structured_rate_limited model=%s attempt=%d", provider.model, attempt + 1
+                )
                 await asyncio.sleep(delay)
 
             except litellm.AuthenticationError:  # type: ignore[attr-defined]
@@ -393,13 +420,19 @@ class LLMGateway:
 
             except (litellm.ServiceUnavailableError, TimeoutError, litellm.Timeout):  # type: ignore[attr-defined]
                 delay = _RETRY_BASE_DELAY * (2**attempt)
-                logger.warning("structured_provider_unavailable model=%s attempt=%d", provider.model, attempt + 1)
+                logger.warning(
+                    "structured_provider_unavailable model=%s attempt=%d",
+                    provider.model,
+                    attempt + 1,
+                )
                 await asyncio.sleep(delay)
 
             except Exception:
                 logger.warning(
                     "structured_provider_failed model=%s attempt=%d",
-                    provider.model, attempt + 1, exc_info=True,
+                    provider.model,
+                    attempt + 1,
+                    exc_info=True,
                 )
                 return None
 
@@ -416,9 +449,8 @@ class LLMGateway:
         """Attempt structured output from local Ollama using JSON mode."""
         try:
             import instructor
-            client = instructor.from_litellm(
-                litellm.acompletion, mode=instructor.Mode.JSON
-            )
+
+            client = instructor.from_litellm(litellm.acompletion, mode=instructor.Mode.JSON)
             result = await client.chat.completions.create(
                 model=LOCAL_FALLBACK_MODEL,
                 messages=messages,

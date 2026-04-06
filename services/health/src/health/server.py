@@ -26,7 +26,7 @@ _START_TIME: float = time.monotonic()
 app = FastAPI(
     title="Sovereign Edge Health",
     version="0.1.0",
-    docs_url=None,   # disable Swagger in production
+    docs_url=None,  # disable Swagger in production
     redoc_url=None,
 )
 

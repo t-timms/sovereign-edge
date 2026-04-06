@@ -86,9 +86,7 @@ class EpisodicMemory:
         try:
             await loop.run_in_executor(
                 None,
-                functools.partial(
-                    self._memory.add, text, user_id=user_id, metadata=metadata or {}
-                ),
+                functools.partial(self._memory.add, text, user_id=user_id, metadata=metadata or {}),
             )
         except Exception as e:
             logger.error("Failed to add memory (async): %s", e, exc_info=True)

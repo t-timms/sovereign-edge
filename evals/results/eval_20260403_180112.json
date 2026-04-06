@@ -1,0 +1,29 @@
+{
+  "router": {
+    "total": 24,
+    "correct": 21,
+    "accuracy": 0.875,
+    "confidence_met": 22,
+    "failures": [
+      {
+        "text": "What questions do FAANG companies ask in ML interviews?",
+        "expected": "career",
+        "got": "intelligence",
+        "conf": 0.4
+      },
+      {
+        "text": "Find software engineering openings in DFW",
+        "expected": "career",
+        "got": "intelligence",
+        "conf": 0.4
+      },
+      {
+        "text": "Draft a LinkedIn post about my new GRPO fine-tuning project",
+        "expected": "creative",
+        "got": "career",
+        "conf": 0.5
+      }
+    ],
+    "elapsed_s": 0.147
+  }
+}

@@ -12,7 +12,7 @@ from __future__ import annotations
 import time
 
 from core.expert import BaseExpert
-from core.types import RoutingDecision, ExpertName, TaskRequest, TaskResult
+from core.types import ExpertName, RoutingDecision, TaskRequest, TaskResult
 from observability.logging import get_logger
 
 from spiritual.subgraph import (
@@ -48,18 +48,20 @@ class SpiritualExpert(BaseExpert):
             except (ValueError, TypeError):
                 pass
 
-        result = await spiritual_subgraph.ainvoke({
-            "query": task.content,
-            "routing": task.routing,
-            "history": history,
-            "is_morning_brief": False,
-            "scripture": "",
-            "response": "",
-            "model_used": "",
-            "tokens_in": 0,
-            "tokens_out": 0,
-            "cost_usd": 0.0,
-        })
+        result = await spiritual_subgraph.ainvoke(
+            {
+                "query": task.content,
+                "routing": task.routing,
+                "history": history,
+                "is_morning_brief": False,
+                "scripture": "",
+                "response": "",
+                "model_used": "",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "cost_usd": 0.0,
+            }
+        )
 
         return TaskResult(
             task_id=task.task_id,
@@ -102,13 +104,19 @@ class SpiritualExpert(BaseExpert):
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             *history,
-            {"role": "user", "content": (
-                f"{scripture_context}\n\n---\n{user_input}" if scripture_context else user_input
-            )},
+            {
+                "role": "user",
+                "content": (
+                    f"{scripture_context}\n\n---\n{user_input}" if scripture_context else user_input
+                ),
+            },
         ]
 
         result = await gateway.complete(
-            messages=messages, max_tokens=1024, routing=task.routing, expert=self.name,
+            messages=messages,
+            max_tokens=1024,
+            routing=task.routing,
+            expert=self.name,
         )
 
         return TaskResult(
@@ -125,18 +133,20 @@ class SpiritualExpert(BaseExpert):
 
     async def morning_brief(self) -> str:
         if spiritual_subgraph is not None:
-            result = await spiritual_subgraph.ainvoke({
-                "query": "",
-                "routing": RoutingDecision.CLOUD,
-                "history": [],
-                "is_morning_brief": True,
-                "scripture": "",
-                "response": "",
-                "model_used": "",
-                "tokens_in": 0,
-                "tokens_out": 0,
-                "cost_usd": 0.0,
-            })
+            result = await spiritual_subgraph.ainvoke(
+                {
+                    "query": "",
+                    "routing": RoutingDecision.CLOUD,
+                    "history": [],
+                    "is_morning_brief": True,
+                    "scripture": "",
+                    "response": "",
+                    "model_used": "",
+                    "tokens_in": 0,
+                    "tokens_out": 0,
+                    "cost_usd": 0.0,
+                }
+            )
             return result["response"]
 
         # Fallback
@@ -150,14 +160,17 @@ class SpiritualExpert(BaseExpert):
         result = await gateway.complete(
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": (
-                    f"Scripture:\n{verse_text}\n\n---\n{DEVOTIONAL_PROMPT}"
-                    if verse_text
-                    else (
-                        "Generate a brief morning devotional with a scripture verse, "
-                        "2-3 sentences of reflection, and a one-sentence prayer. Under 120 words."
-                    )
-                )},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Scripture:\n{verse_text}\n\n---\n{DEVOTIONAL_PROMPT}"
+                        if verse_text
+                        else (
+                            "Generate a brief morning devotional with a scripture verse, "
+                            "2-3 sentences of reflection, and a one-sentence prayer. Under 120 words."
+                        )
+                    ),
+                },
             ],
             max_tokens=300,
             routing=RoutingDecision.CLOUD,
@@ -170,7 +183,8 @@ class SpiritualExpert(BaseExpert):
             from llm.gateway import get_gateway
 
             result = await get_gateway().complete(
-                messages=[{"role": "user", "content": "ping"}], max_tokens=5,
+                messages=[{"role": "user", "content": "ping"}],
+                max_tokens=5,
             )
             return bool(result.get("content"))
         except Exception:

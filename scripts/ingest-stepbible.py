@@ -37,29 +37,29 @@ logger = logging.getLogger(__name__)
 _REPO_RAW = "https://raw.githubusercontent.com/STEPBible/STEPBible-Data/master"
 
 # TIPNR Tagged texts — ESV (English Standard Version)
-_TIPNR_NT = (  # noqa: E501
+_TIPNR_NT = (
     f"{_REPO_RAW}/Translators%20Amalgamated%20NT/"
     "TANTT%20-%20Translators%20Amalgamated%20NT%20-%20STEPBible.org%20CC%20BY.txt"
 )
-_TIPNR_OT = (  # noqa: E501
+_TIPNR_OT = (
     f"{_REPO_RAW}/Translators%20Amalgamated%20OT/"
     "TOTHT%20-%20Translators%20Amalgamated%20OT%20Heb%20%26%20Tran%20-%20STEPBible.org%20CC%20BY.txt"
 )
 
 # NASB Simple (plain text, each verse on a line)
-_NASB_ZIP = (  # noqa: E501
+_NASB_ZIP = (
     f"{_REPO_RAW}/NASB%20plain%20text/"
     "NASB%20-%20New%20American%20Standard%20Bible%20-%20STEPBible.org%20CC%20BY.zip"
 )
 
 # English translation (ESV-like) from STEP
-_ESVS_URL = (  # noqa: E501
+_ESVS_URL = (
     f"{_REPO_RAW}/ESVS%20-%20English%20Standard%20Version%20Selections/"
     "ESVS%20-%20English%20Standard%20Version%20Selections%20-%20STEPBible.org%20CC%20BY.txt"
 )
 
 # TSK cross-references (tab-delimited)
-_TSK_URL = (  # noqa: E501
+_TSK_URL = (
     f"{_REPO_RAW}/TSK%20-%20Treasury%20of%20Scripture%20Knowledge/"
     "TSK%20-%20Treasury%20of%20Scripture%20Knowledge%20-%20STEPBible.org%20CC%20BY.txt"
 )

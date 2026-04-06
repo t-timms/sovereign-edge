@@ -169,7 +169,9 @@ class SovereignEdgeBot:
         await update.message.reply_text("🔍 Checking experts…")
         health = await self._orchestrator.health_check_all()
         lines = [f"{'✅' if ok else '❌'} <b>{name}</b>" for name, ok in sorted(health.items())]
-        text = "🏥 <b>Expert Health</b>\n\n" + "\n".join(lines) if lines else "No experts registered."
+        text = (
+            "🏥 <b>Expert Health</b>\n\n" + "\n".join(lines) if lines else "No experts registered."
+        )
         await update.message.reply_text(text, parse_mode="HTML")
 
     @_auth
@@ -375,14 +377,14 @@ class SovereignEdgeBot:
 
         if not text.strip():
             await update.message.reply_text(
-                "⚠️ Could not extract text from this file. "
-                "Supported formats: PDF, DOCX, TXT, MD."
+                "⚠️ Could not extract text from this file. Supported formats: PDF, DOCX, TXT, MD."
             )
             return
 
         # Determine intent from filename signal first, then content
         if any(kw in fname for kw in ("resume", "cv", "cover")):
             from core.types import Intent, RoutingDecision
+
             intent, routing = Intent.CAREER, RoutingDecision.CLOUD
             confidence = 0.9
         else:
@@ -452,7 +454,10 @@ class SovereignEdgeBot:
 
         logger.info(
             "document_handled fname=%s intent=%s confidence=%.2f chars=%d",
-            fname, intent.value, confidence, len(buffer),
+            fname,
+            intent.value,
+            confidence,
+            len(buffer),
         )
 
 

@@ -6,9 +6,9 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from core.types import (
+    ExpertName,
     Intent,
     RoutingDecision,
-    ExpertName,
     TaskPriority,
     TaskRequest,
     TaskResult,

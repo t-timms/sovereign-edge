@@ -105,6 +105,7 @@ EXAMPLES:
 
 # ── Director plan model ───────────────────────────────────────────────────────
 
+
 class DirectorPlan(BaseModel):
     """Validated routing plan returned by the director LLM.
 
@@ -124,16 +125,18 @@ class DirectorPlan(BaseModel):
 
 # ── LangGraph state ───────────────────────────────────────────────────────────
 
+
 class DirectorState(TypedDict):
     request: TaskRequest
-    plan: list[str]          # ordered expert names
-    context_pass: bool       # carry output between experts
-    results: list[str]       # accumulated expert outputs
+    plan: list[str]  # ordered expert names
+    context_pass: bool  # carry output between experts
+    results: list[str]  # accumulated expert outputs
     final_output: str
     error: str
 
 
 # ── Director graph ────────────────────────────────────────────────────────────
+
 
 class DirectorGraph:
     """LangGraph-powered director that plans and executes multi-expert chains.
@@ -203,7 +206,9 @@ class DirectorGraph:
 
             logger.info(
                 "director_plan experts=%s context_pass=%s query_len=%d",
-                experts, context_pass, len(request.content),
+                experts,
+                context_pass,
+                len(request.content),
             )
             return {"plan": experts, "context_pass": context_pass, "results": [], "error": ""}
 
@@ -253,13 +258,15 @@ class DirectorGraph:
                 results.append(content)
                 logger.info(
                     "director_execute expert=%s chars=%d via=subgraph",
-                    expert_name, len(content),
+                    expert_name,
+                    len(content),
                 )
                 return {"plan": plan, "results": results}
             except Exception:
                 logger.warning(
                     "director_subgraph_invoke_failed expert=%s — falling back to expert.process()",
-                    expert_name, exc_info=True,
+                    expert_name,
+                    exc_info=True,
                 )
 
         # Fallback: call expert.process() (e.g. LangGraph unavailable in expert package)
@@ -268,7 +275,8 @@ class DirectorGraph:
             results.append(result.content)
             logger.info(
                 "director_execute expert=%s chars=%d via=process()",
-                expert_name, len(result.content),
+                expert_name,
+                len(result.content),
             )
         except Exception:
             logger.error("director_execute_failed expert=%s", expert_name, exc_info=True)
@@ -290,7 +298,7 @@ class DirectorGraph:
             "You have received outputs from multiple AI experts for a single user request. "
             "Weave them into ONE coherent, well-structured response. "
             "Do not repeat yourself. Keep the Telegram Markdown format (*bold*, _italic_, links).\n\n"
-            + "\n\n---\n".join(f"Expert output {i+1}:\n{r}" for i, r in enumerate(results))
+            + "\n\n---\n".join(f"Expert output {i + 1}:\n{r}" for i, r in enumerate(results))
         )
         try:
             merged = await gateway.complete(
@@ -360,12 +368,9 @@ class DirectorGraph:
                 routing=request.routing,
             )
 
-        content = final_state.get("final_output") or (
-            final_state.get("results", [""])[-1]
-        )
+        content = final_state.get("final_output") or (final_state.get("results", [""])[-1])
         experts_used = ",".join(
-            s for s in _ROUTABLE_EXPERTS
-            if any(s in r for r in final_state.get("results", []))
+            s for s in _ROUTABLE_EXPERTS if any(s in r for r in final_state.get("results", []))
         ) or _intent_to_expert(request.intent)
 
         return TaskResult(
@@ -379,6 +384,7 @@ class DirectorGraph:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _intent_to_expert(intent: Intent) -> str:
     """Map Intent enum to expert name string."""
@@ -418,15 +424,19 @@ def _get_expert_subgraph(expert_name: str) -> Any | None:
     try:
         if expert_name == ExpertName.INTELLIGENCE:
             from intelligence.subgraph import intelligence_subgraph
+
             return intelligence_subgraph
         if expert_name == ExpertName.CAREER:
             from career.subgraph import career_subgraph
+
             return career_subgraph
         if expert_name == ExpertName.SPIRITUAL:
             from spiritual.subgraph import spiritual_subgraph
+
             return spiritual_subgraph
         if expert_name == ExpertName.CREATIVE:
             from creative.subgraph import creative_subgraph
+
             return creative_subgraph
     except Exception:
         logger.warning("subgraph_import_failed expert=%s", expert_name, exc_info=True)
@@ -460,5 +470,7 @@ def _build_expert_state(
     elif expert_name == ExpertName.CREATIVE:
         base["trend_context"] = ""
     else:
-        logger.warning("director_unknown_expert_state expert=%s — subgraph may KeyError", expert_name)
+        logger.warning(
+            "director_unknown_expert_state expert=%s — subgraph may KeyError", expert_name
+        )
     return base

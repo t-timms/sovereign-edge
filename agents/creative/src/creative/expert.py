@@ -12,7 +12,7 @@ from __future__ import annotations
 import time
 
 from core.expert import BaseExpert
-from core.types import RoutingDecision, ExpertName, TaskRequest, TaskResult
+from core.types import ExpertName, RoutingDecision, TaskRequest, TaskResult
 from observability.logging import get_logger
 
 from creative.subgraph import (
@@ -48,18 +48,20 @@ class CreativeExpert(BaseExpert):
             except (ValueError, TypeError):
                 pass
 
-        result = await creative_subgraph.ainvoke({
-            "query": task.content,
-            "routing": task.routing,
-            "history": history,
-            "is_morning_brief": False,
-            "trend_context": "",
-            "response": "",
-            "model_used": "",
-            "tokens_in": 0,
-            "tokens_out": 0,
-            "cost_usd": 0.0,
-        })
+        result = await creative_subgraph.ainvoke(
+            {
+                "query": task.content,
+                "routing": task.routing,
+                "history": history,
+                "is_morning_brief": False,
+                "trend_context": "",
+                "response": "",
+                "model_used": "",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "cost_usd": 0.0,
+            }
+        )
 
         return TaskResult(
             task_id=task.task_id,
@@ -86,7 +88,8 @@ class CreativeExpert(BaseExpert):
 
         if task.routing == RoutingDecision.CLOUD:
             trend_context = await jina_search(
-                f"{task.content} content strategy examples 2026", max_results=3,
+                f"{task.content} content strategy examples 2026",
+                max_results=3,
             )
 
         history: list[dict[str, str]] = []
@@ -100,14 +103,21 @@ class CreativeExpert(BaseExpert):
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             *history,
-            {"role": "user", "content": (
-                f"Current trends and context:\n{trend_context}\n\n---\n{user_input}"
-                if trend_context else user_input
-            )},
+            {
+                "role": "user",
+                "content": (
+                    f"Current trends and context:\n{trend_context}\n\n---\n{user_input}"
+                    if trend_context
+                    else user_input
+                ),
+            },
         ]
 
         result = await gateway.complete(
-            messages=messages, max_tokens=2048, routing=task.routing, expert=self.name,
+            messages=messages,
+            max_tokens=2048,
+            routing=task.routing,
+            expert=self.name,
         )
 
         return TaskResult(
@@ -124,18 +134,20 @@ class CreativeExpert(BaseExpert):
 
     async def morning_brief(self) -> str:
         if creative_subgraph is not None:
-            result = await creative_subgraph.ainvoke({
-                "query": "",
-                "routing": RoutingDecision.CLOUD,
-                "history": [],
-                "is_morning_brief": True,
-                "trend_context": "",
-                "response": "",
-                "model_used": "",
-                "tokens_in": 0,
-                "tokens_out": 0,
-                "cost_usd": 0.0,
-            })
+            result = await creative_subgraph.ainvoke(
+                {
+                    "query": "",
+                    "routing": RoutingDecision.CLOUD,
+                    "history": [],
+                    "is_morning_brief": True,
+                    "trend_context": "",
+                    "response": "",
+                    "model_used": "",
+                    "tokens_in": 0,
+                    "tokens_out": 0,
+                    "cost_usd": 0.0,
+                }
+            )
             return result["response"]
 
         # Fallback
@@ -144,16 +156,21 @@ class CreativeExpert(BaseExpert):
 
         gateway = get_gateway()
         trend_context = await jina_search(
-            "AI content creation trends 2026 creator economy", max_results=3,
+            "AI content creation trends 2026 creator economy",
+            max_results=3,
         )
 
         result = await gateway.complete(
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": (
-                    f"Current trends and context:\n{trend_context}\n\n---\n{MORNING_PROMPT}"
-                    if trend_context else MORNING_PROMPT
-                )},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Current trends and context:\n{trend_context}\n\n---\n{MORNING_PROMPT}"
+                        if trend_context
+                        else MORNING_PROMPT
+                    ),
+                },
             ],
             max_tokens=150,
             routing=RoutingDecision.CLOUD,
@@ -166,7 +183,8 @@ class CreativeExpert(BaseExpert):
             from llm.gateway import get_gateway
 
             result = await get_gateway().complete(
-                messages=[{"role": "user", "content": "ping"}], max_tokens=5,
+                messages=[{"role": "user", "content": "ping"}],
+                max_tokens=5,
             )
             return bool(result.get("content"))
         except Exception:

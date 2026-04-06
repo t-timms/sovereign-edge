@@ -51,20 +51,22 @@ class IntelligenceExpert(BaseExpert):
                 pass
 
         try:
-            result = await intelligence_subgraph.ainvoke({
-                "query": task.content,
-                "routing": task.routing,
-                "history": history,
-                "is_morning_brief": False,
-                "raw_papers": [],
-                "ranked_papers": [],
-                "repo_relevant_papers": [],
-                "response": "",
-                "model_used": "",
-                "tokens_in": 0,
-                "tokens_out": 0,
-                "cost_usd": 0.0,
-            })
+            result = await intelligence_subgraph.ainvoke(
+                {
+                    "query": task.content,
+                    "routing": task.routing,
+                    "history": history,
+                    "is_morning_brief": False,
+                    "raw_papers": [],
+                    "ranked_papers": [],
+                    "repo_relevant_papers": [],
+                    "response": "",
+                    "model_used": "",
+                    "tokens_in": 0,
+                    "tokens_out": 0,
+                    "cost_usd": 0.0,
+                }
+            )
         except Exception:
             logger.warning("intel_subgraph_invoke_failed — falling back to direct", exc_info=True)
             return await self._process_direct(task, t0)
@@ -123,22 +125,29 @@ class IntelligenceExpert(BaseExpert):
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             *history,
-            {"role": "user", "content": (
-                f"Live research data:\n{research_context}\n\n---\n{user_input}"
-                if research_context
-                else user_input
-            )},
+            {
+                "role": "user",
+                "content": (
+                    f"Live research data:\n{research_context}\n\n---\n{user_input}"
+                    if research_context
+                    else user_input
+                ),
+            },
         ]
 
         result = await gateway.complete(
-            messages=messages, max_tokens=2048, routing=task.routing, expert=self.name,
+            messages=messages,
+            max_tokens=2048,
+            routing=task.routing,
+            expert=self.name,
         )
 
         brief = BriefOutput(content=result["content"])
         if not brief.is_valid:
             logger.warning(
                 "brief_quality_low expert=intelligence links=%d words=%d",
-                brief.link_count, brief.word_count,
+                brief.link_count,
+                brief.word_count,
             )
 
         return TaskResult(
@@ -156,23 +165,27 @@ class IntelligenceExpert(BaseExpert):
     async def morning_brief(self) -> str:
         if intelligence_subgraph is not None:
             try:
-                result = await intelligence_subgraph.ainvoke({
-                    "query": "",
-                    "routing": RoutingDecision.CLOUD,
-                    "history": [],
-                    "is_morning_brief": True,
-                    "raw_papers": [],
-                    "ranked_papers": [],
-                    "repo_relevant_papers": [],
-                    "response": "",
-                    "model_used": "",
-                    "tokens_in": 0,
-                    "tokens_out": 0,
-                    "cost_usd": 0.0,
-                })
+                result = await intelligence_subgraph.ainvoke(
+                    {
+                        "query": "",
+                        "routing": RoutingDecision.CLOUD,
+                        "history": [],
+                        "is_morning_brief": True,
+                        "raw_papers": [],
+                        "ranked_papers": [],
+                        "repo_relevant_papers": [],
+                        "response": "",
+                        "model_used": "",
+                        "tokens_in": 0,
+                        "tokens_out": 0,
+                        "cost_usd": 0.0,
+                    }
+                )
                 return result["response"]
             except Exception:
-                logger.warning("intel_morning_brief_subgraph_failed — falling back to direct", exc_info=True)
+                logger.warning(
+                    "intel_morning_brief_subgraph_failed — falling back to direct", exc_info=True
+                )
                 # fall through to direct path below
 
         # Fallback
@@ -182,7 +195,9 @@ class IntelligenceExpert(BaseExpert):
 
         gateway = get_gateway()
         arxiv_papers, hf_papers = await asyncio.gather(
-            fetch_recent(max_results=5), fetch_daily_papers(), return_exceptions=True,
+            fetch_recent(max_results=5),
+            fetch_daily_papers(),
+            return_exceptions=True,
         )
         if isinstance(arxiv_papers, Exception):
             logger.warning("morning_brief_arxiv_failed", error=str(arxiv_papers))
@@ -201,10 +216,14 @@ class IntelligenceExpert(BaseExpert):
         result = await gateway.complete(
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": (
-                    f"Live research data:\n{research_context}\n\n---\n{MORNING_PROMPT}"
-                    if research_context else MORNING_PROMPT
-                )},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Live research data:\n{research_context}\n\n---\n{MORNING_PROMPT}"
+                        if research_context
+                        else MORNING_PROMPT
+                    ),
+                },
             ],
             max_tokens=300,
             routing=RoutingDecision.CLOUD,
@@ -214,7 +233,8 @@ class IntelligenceExpert(BaseExpert):
         if not brief.is_valid:
             logger.warning(
                 "morning_brief_quality_low links=%d words=%d",
-                brief.link_count, brief.word_count,
+                brief.link_count,
+                brief.word_count,
             )
         return brief.content
 
@@ -231,7 +251,9 @@ class IntelligenceExpert(BaseExpert):
 
         if task.routing == RoutingDecision.CLOUD:
             arxiv_papers, hf_papers = await asyncio.gather(
-                fetch_recent(max_results=5), fetch_daily_papers(), return_exceptions=True,
+                fetch_recent(max_results=5),
+                fetch_daily_papers(),
+                return_exceptions=True,
             )
             if isinstance(arxiv_papers, Exception):
                 logger.warning("stream_arxiv_failed", error=str(arxiv_papers))
@@ -257,14 +279,21 @@ class IntelligenceExpert(BaseExpert):
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             *history,
-            {"role": "user", "content": (
-                f"Live research data:\n{research_context}\n\n---\n{user_input}"
-                if research_context else user_input
-            )},
+            {
+                "role": "user",
+                "content": (
+                    f"Live research data:\n{research_context}\n\n---\n{user_input}"
+                    if research_context
+                    else user_input
+                ),
+            },
         ]
 
         async for chunk in gateway.stream_complete(
-            messages=messages, max_tokens=2048, routing=task.routing, expert=self.name,
+            messages=messages,
+            max_tokens=2048,
+            routing=task.routing,
+            expert=self.name,
         ):
             yield chunk
 
@@ -273,7 +302,8 @@ class IntelligenceExpert(BaseExpert):
             from llm.gateway import get_gateway
 
             result = await get_gateway().complete(
-                messages=[{"role": "user", "content": "ping"}], max_tokens=5,
+                messages=[{"role": "user", "content": "ping"}],
+                max_tokens=5,
             )
             return bool(result.get("content"))
         except Exception:

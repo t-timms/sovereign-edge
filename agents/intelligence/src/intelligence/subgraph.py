@@ -46,12 +46,32 @@ logger = logging.getLogger(__name__)
 
 # ── Relevance keywords for the ranker node ────────────────────────────────────
 
-_RELEVANCE_KEYWORDS: frozenset[str] = frozenset({
-    "fine-tuning", "lora", "qlora", "grpo", "rlhf", "dpo", "orpo",
-    "inference", "vllm", "tensorrt", "quantization", "flash attention",
-    "agent", "langgraph", "mcp", "tool use", "reasoning",
-    "llm", "transformer", "diffusion", "multimodal", "benchmark",
-})
+_RELEVANCE_KEYWORDS: frozenset[str] = frozenset(
+    {
+        "fine-tuning",
+        "lora",
+        "qlora",
+        "grpo",
+        "rlhf",
+        "dpo",
+        "orpo",
+        "inference",
+        "vllm",
+        "tensorrt",
+        "quantization",
+        "flash attention",
+        "agent",
+        "langgraph",
+        "mcp",
+        "tool use",
+        "reasoning",
+        "llm",
+        "transformer",
+        "diffusion",
+        "multimodal",
+        "benchmark",
+    }
+)
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
@@ -100,6 +120,7 @@ Be specific. Cite paper titles and link them.\
 
 # ── Output validator ──────────────────────────────────────────────────────────
 
+
 class BriefOutput(BaseModel):
     """Validates structural quality of an intelligence brief before delivery."""
 
@@ -117,6 +138,7 @@ class BriefOutput(BaseModel):
 
 
 # ── Structured output models ──────────────────────────────────────────────────
+
 
 class PaperEntry(BaseModel):
     """One paper in the intelligence brief."""
@@ -171,11 +193,12 @@ def format_intel_brief(brief: IntelBriefResponse, repo_relevant: list[dict]) -> 
 
 # ── State ─────────────────────────────────────────────────────────────────────
 
+
 class IntelligenceState(TypedDict):
     # ── Inputs ────────────────────────────────────────────────────────────
     query: str
-    routing: str                              # RoutingDecision value
-    history: list[dict[str, str]]             # prior conversation turns
+    routing: str  # RoutingDecision value
+    history: list[dict[str, str]]  # prior conversation turns
     is_morning_brief: bool
     # ── Intermediate ──────────────────────────────────────────────────────
     # operator.add merges parallel writes from arxiv_fetcher + hf_fetcher
@@ -192,6 +215,7 @@ class IntelligenceState(TypedDict):
 
 
 # ── Nodes ─────────────────────────────────────────────────────────────────────
+
 
 async def _arxiv_fetcher(state: IntelligenceState) -> dict[str, Any]:
     """Fetch recent AI/ML papers from arXiv (cloud-only)."""
@@ -258,6 +282,7 @@ def _parse_repo_topics() -> dict[str, list[str]]:
     """
     try:
         from core.config import get_settings
+
         raw = get_settings().repo_topics.strip()
     except Exception:
         return {}
@@ -346,6 +371,7 @@ def _ranker(state: IntelligenceState) -> dict[str, Any]:
 
 def _keyword_rank(papers: list[dict]) -> list[dict]:
     """Rank papers by keyword hit count. Returns top 8."""
+
     def _score(paper: dict) -> int:
         text = (paper.get("title", "") + " " + paper.get("summary", "")).lower()
         return sum(1 for kw in _RELEVANCE_KEYWORDS if kw in text)
@@ -368,9 +394,7 @@ async def _synthesizer(state: IntelligenceState) -> dict[str, Any]:
         try:
             from search.arxiv import format_papers
 
-            research_context = "Recent AI/ML papers:\n" + format_papers(
-                state["ranked_papers"]
-            )
+            research_context = "Recent AI/ML papers:\n" + format_papers(state["ranked_papers"])
         except Exception:
             logger.warning("intel_format_papers_failed", exc_info=True)
 
@@ -451,6 +475,7 @@ async def _synthesizer(state: IntelligenceState) -> dict[str, Any]:
 
 
 # ── Graph construction ────────────────────────────────────────────────────────
+
 
 def _build() -> Any:
     builder: StateGraph = StateGraph(IntelligenceState)

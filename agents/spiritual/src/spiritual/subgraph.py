@@ -75,6 +75,7 @@ Keep it under 120 words. Warm and personal in tone.\
 
 # ── State ─────────────────────────────────────────────────────────────────────
 
+
 class SpiritualState(TypedDict):
     # ── Inputs ────────────────────────────────────────────────────────────
     query: str
@@ -82,7 +83,7 @@ class SpiritualState(TypedDict):
     history: list[dict[str, str]]
     is_morning_brief: bool
     # ── Intermediate ──────────────────────────────────────────────────────
-    scripture: str       # formatted verse text from Bible API
+    scripture: str  # formatted verse text from Bible API
     # ── Outputs ───────────────────────────────────────────────────────────
     response: str
     model_used: str
@@ -92,6 +93,7 @@ class SpiritualState(TypedDict):
 
 
 # ── Nodes ─────────────────────────────────────────────────────────────────────
+
 
 async def _scripture_fetcher(state: SpiritualState) -> dict[str, Any]:
     """Fetch a Bible verse — specific reference if found in query, else random."""
@@ -164,6 +166,7 @@ async def _theologian(state: SpiritualState) -> dict[str, Any]:
 
 
 # ── Graph construction ────────────────────────────────────────────────────────
+
 
 def _build() -> Any:
     builder: StateGraph = StateGraph(SpiritualState)

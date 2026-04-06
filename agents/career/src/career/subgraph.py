@@ -34,12 +34,32 @@ logger = logging.getLogger(__name__)
 
 # ── Structured output models ───────────────────────────────────────────────────
 
-_DFW_CITIES: frozenset[str] = frozenset({
-    "dallas", "fort worth", "plano", "irving", "frisco", "allen", "mckinney",
-    "richardson", "arlington", "southlake", "addison", "carrollton", "garland",
-    "lewisville", "denton", "grand prairie", "mesquite", "rowlett", "mansfield",
-    "dfw", "dallas-fort worth", "dallas fort worth",
-})
+_DFW_CITIES: frozenset[str] = frozenset(
+    {
+        "dallas",
+        "fort worth",
+        "plano",
+        "irving",
+        "frisco",
+        "allen",
+        "mckinney",
+        "richardson",
+        "arlington",
+        "southlake",
+        "addison",
+        "carrollton",
+        "garland",
+        "lewisville",
+        "denton",
+        "grand prairie",
+        "mesquite",
+        "rowlett",
+        "mansfield",
+        "dfw",
+        "dallas-fort worth",
+        "dallas fort worth",
+    }
+)
 
 
 class JobListing(BaseModel):
@@ -65,9 +85,9 @@ class JobListing(BaseModel):
     def is_dfw_eligible(self) -> bool:
         """True if the job is in a DFW city or explicitly remote/hybrid."""
         city_lower = self.city.lower()
-        return (
-            any(dfw_city in city_lower for dfw_city in _DFW_CITIES)
-            or self.work_mode in ("remote", "hybrid")
+        return any(dfw_city in city_lower for dfw_city in _DFW_CITIES) or self.work_mode in (
+            "remote",
+            "hybrid",
         )
 
 
@@ -187,6 +207,7 @@ def build_search_queries() -> list[str]:
 
 # ── State ─────────────────────────────────────────────────────────────────────
 
+
 class CareerState(TypedDict):
     # ── Inputs ────────────────────────────────────────────────────────────
     query: str
@@ -205,6 +226,7 @@ class CareerState(TypedDict):
 
 # ── Nodes ─────────────────────────────────────────────────────────────────────
 
+
 async def _job_searcher(state: CareerState) -> dict[str, Any]:
     """Search for live job listings and market data via Jina (cloud-only)."""
     from core.types import RoutingDecision
@@ -218,6 +240,7 @@ async def _job_searcher(state: CareerState) -> dict[str, Any]:
             query = build_search_queries()[0]
         else:
             from core.config import get_settings
+
             s = get_settings()
             location = s.career_target_location
             year = datetime.date.today().year
@@ -308,6 +331,7 @@ async def _strategist(state: CareerState) -> dict[str, Any]:
 
 
 # ── Graph construction ────────────────────────────────────────────────────────
+
 
 def _build() -> Any:
     builder: StateGraph = StateGraph(CareerState)
