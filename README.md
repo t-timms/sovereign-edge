@@ -8,6 +8,7 @@
 
 <br/>
 
+[![CI](https://github.com/omnipotence-eth/sovereign-edge/actions/workflows/ci.yml/badge.svg)](https://github.com/omnipotence-eth/sovereign-edge/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64?style=flat-square&logo=ruff&logoColor=black)](https://github.com/astral-sh/ruff)
 [![LangGraph](https://img.shields.io/badge/built%20with-LangGraph-FF6B35?style=flat-square)](https://github.com/langchain-ai/langgraph)
@@ -21,6 +22,16 @@
 <br/>
 
 </div>
+
+---
+
+## Demo
+
+<!-- Replace with a screen recording of the bot in action (OBS → GIF via Kdenlive or ScreenToGif) -->
+<!-- Recommended: record a Telegram conversation showing a morning brief + live career query + scripture response -->
+<!-- Target size: 800×500px, <5MB, looping GIF or MP4 -->
+
+> *Demo coming soon — see [Verifying the Deployment](docs/deployment.md#verifying-the-deployment) for what to expect.*
 
 ---
 
@@ -237,6 +248,8 @@ See [Configuration](docs/configuration.md) for all `SE_` variables.
 | [Development](docs/development.md) | Local setup, testing, code quality, adding new experts |
 | [Contributing](CONTRIBUTING.md) | Branch strategy, commit standards, PR checklist, ship workflow |
 | [Troubleshooting](docs/troubleshooting.md) | Common errors and fixes |
+| [Changelog](CHANGELOG.md) | Version history and release notes |
+| [Security](SECURITY.md) | Vulnerability disclosure policy and security model |
 
 Full architecture deep-dive: [ARCHITECTURE.md](ARCHITECTURE.md)
 

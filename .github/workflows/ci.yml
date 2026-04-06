@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync --all-packages
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format
+        run: uv run ruff format . --check
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: lint
+    env:
+      # Dummy values — tests must mock all external I/O
+      SE_TELEGRAM_BOT_TOKEN: ci_dummy_token
+      SE_TELEGRAM_OWNER_CHAT_ID: "123456789"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync --all-packages
+
+      - name: Run tests
+        run: |
+          uv run pytest -q --tb=short \
+            --ignore=evals \
+            --ignore=agents/creative/tests \
+            --ignore=agents/spiritual/tests \
+            --ignore=packages/observability/tests

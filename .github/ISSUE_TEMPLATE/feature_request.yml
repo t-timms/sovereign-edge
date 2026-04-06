@@ -1,0 +1,54 @@
+name: Feature Request
+description: Propose a new expert, data source, capability, or improvement
+labels: [enhancement]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Great ideas start with clear motivation. Describe the problem you're trying to solve, not just the solution.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - New expert agent
+        - Existing expert improvement
+        - LLM gateway / routing
+        - Intent router
+        - Memory system
+        - Scheduling / morning pipeline
+        - Deployment / ops
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: What problem does this solve? What's the current limitation?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you implement this? Be as specific or as vague as you like.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: What other approaches did you consider and why did you rule them out?
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Links, examples, related issues, or anything else relevant
