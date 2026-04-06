@@ -64,7 +64,9 @@ class SpiritualExpert(BaseExpert):
                 }
             )
         except Exception:
-            logger.warning("spiritual_subgraph_invoke_failed — falling back to direct", exc_info=True)
+            logger.warning(
+                "spiritual_subgraph_invoke_failed — falling back to direct", exc_info=True
+            )  # noqa: E501
             return await self._process_direct(task, t0)
 
         return TaskResult(
@@ -153,7 +155,9 @@ class SpiritualExpert(BaseExpert):
                 )
                 return result["response"]
             except Exception:
-                logger.warning("spiritual_subgraph_morning_brief_failed — using direct", exc_info=True)
+                logger.warning(
+                    "spiritual_subgraph_morning_brief_failed — using direct", exc_info=True
+                )  # noqa: E501
 
         # Fallback
         from llm.gateway import get_gateway

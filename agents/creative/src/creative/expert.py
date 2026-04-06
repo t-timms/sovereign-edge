@@ -64,7 +64,9 @@ class CreativeExpert(BaseExpert):
                 }
             )
         except Exception:
-            logger.warning("creative_subgraph_invoke_failed — falling back to direct", exc_info=True)
+            logger.warning(
+                "creative_subgraph_invoke_failed — falling back to direct", exc_info=True
+            )  # noqa: E501
             return await self._process_direct(task, t0)
 
         return TaskResult(
@@ -154,7 +156,9 @@ class CreativeExpert(BaseExpert):
                 )
                 return result["response"]
             except Exception:
-                logger.warning("creative_subgraph_morning_brief_failed — using direct", exc_info=True)
+                logger.warning(
+                    "creative_subgraph_morning_brief_failed — using direct", exc_info=True
+                )  # noqa: E501
 
         # Fallback
         from llm.gateway import get_gateway
