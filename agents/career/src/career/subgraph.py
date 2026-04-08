@@ -238,7 +238,9 @@ STRONG RECOMMENDATION: Only surface jobs with score ≥ 3.5. Flag 4.5+ as priori
     return (
         f"{_FORMAT_RULES}\n\n---\n\n"
         f"You are the Career Intelligence of Sovereign Edge — a world-class career strategist\n"
-        f"specializing in {roles} roles.\n\n"
+        f"specializing in {roles} roles.\n"
+        f"Include ALL experience levels — junior, mid, senior — not just senior roles.\n"
+        f"The candidate is career-pivoting and open to mid-level positions.\n\n"
         f"TARGET AREA: {location}. Only include jobs in: {cities},\n"
         f"OR jobs explicitly marked remote/hybrid open to {location} candidates.\n"
         f"HARD RULE: Do not list jobs in other cities (NYC, SF, Seattle, etc.) unless remote.\n\n"

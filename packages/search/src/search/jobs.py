@@ -26,10 +26,10 @@ _ML_TITLE_KEYWORDS: frozenset[str] = frozenset(
         "machine learning",
         "ml engineer",
         "ai engineer",
-        "llm engineer",
+        "llm",
         "data scientist",
         "deep learning",
-        "nlp engineer",
+        "nlp",
         "mlops",
         "ml ops",
         "ai/ml",
@@ -42,6 +42,10 @@ _ML_TITLE_KEYWORDS: frozenset[str] = frozenset(
         "foundation model",
         "inference engineer",
         "platform engineer",
+        "data engineer",
+        "analytics engineer",
+        "solutions engineer",
+        "software engineer",
     }
 )
 
@@ -207,8 +211,9 @@ async def fetch_all_sources(
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         tasks: list = [
             _fetch_muse(client),
-            _fetch_remotive(client, "machine learning engineer"),
-            _fetch_remotive(client, "LLM AI engineer"),
+            _fetch_remotive(client, "machine learning"),
+            _fetch_remotive(client, "AI engineer"),
+            _fetch_remotive(client, "data scientist"),
         ]
         if adzuna_app_id and adzuna_app_key:
             logger.info("jobs_adzuna_enabled — adding Adzuna tasks")
@@ -219,7 +224,17 @@ async def fetch_all_sources(
                     ),
                     _fetch_adzuna(client, adzuna_app_id, adzuna_app_key, "AI engineer", "dallas"),
                     _fetch_adzuna(
-                        client, adzuna_app_id, adzuna_app_key, "AI engineer LLM", "plano"
+                        client, adzuna_app_id, adzuna_app_key, "data scientist", "dallas"
+                    ),
+                    _fetch_adzuna(
+                        client, adzuna_app_id, adzuna_app_key, "MLOps engineer", "dallas"
+                    ),
+                    _fetch_adzuna(
+                        client,
+                        adzuna_app_id,
+                        adzuna_app_key,
+                        "software engineer AI",
+                        "fort worth",
                     ),
                 ]
             )

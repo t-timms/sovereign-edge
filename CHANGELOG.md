@@ -37,6 +37,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `packages/search/src/search/jobs.py`: Expanded The Muse query set from 3 to 5 — added "Engineering" (DFW + Remote) and "Data & Analytics" (DFW) categories to capture ML Engineer roles not listed under "Data Science". Removed "Software Engineer" (too noisy for ML filtering).
 
 ### Changed
+- `packages/search/src/search/jobs.py`: Broadened job search queries — Adzuna now runs 5 parallel queries: "machine learning engineer", "AI engineer", "data scientist", "MLOps engineer", "software engineer AI" across Dallas/Fort Worth (was 3 queries, Dallas/Plano only). Remotive searches widened: "machine learning", "AI engineer", "data scientist" (was "machine learning engineer", "LLM AI engineer"). Title keyword filter expanded with "data engineer", "analytics engineer", "solutions engineer", "software engineer" to capture adjacent roles.
+- `agents/career/src/career/subgraph.py`: System prompt now explicitly instructs LLM to include all experience levels (junior, mid, senior) and notes candidate is career-pivoting and open to mid-level positions.
 - `agents/career/src/career/subgraph.py`: `_job_searcher` node now runs The Muse + Remotive + Adzuna + Jina in parallel (was Jina-only). Deduplicates via `JobStore` on morning briefs only (on-demand shows all). Loads resume profile via `asyncio.to_thread`. `_MAX_SEARCH_CHARS` raised from 10K to 12K.
 - `agents/career/src/career/subgraph.py`: `build_system_prompt()` now accepts `resume_context` and injects candidate skill profile into LLM system prompt.
 - `agents/career/src/career/subgraph.py`: `CareerState` adds `new_job_count` and `resume_context` fields. Morning brief header shows new job count.
