@@ -158,6 +158,7 @@ async def _fetch_adzuna(
     app_key: str,
     query: str = "machine learning engineer",
     where: str = "dallas",
+    results_per_page: int = 50,
 ) -> list[JobRawListing]:
     """Fetch from Adzuna (free tier: 50 req/day — developer.adzuna.com)."""
     if not app_id or not app_key:
@@ -172,7 +173,7 @@ async def _fetch_adzuna(
                 "what": query,
                 "where": where,
                 "distance": 50,
-                "results_per_page": 20,
+                "results_per_page": results_per_page,
                 "sort_by": "date",
                 "max_days_old": 14,
             },
@@ -196,8 +197,29 @@ async def _fetch_adzuna(
             )
     except (httpx.HTTPError, KeyError, ValueError):
         logger.warning("adzuna_fetch_failed query=%r where=%r", query, where, exc_info=True)
-    logger.info("jobs_adzuna_fetched count=%d", len(results))
+    logger.info("jobs_adzuna_fetched query=%r count=%d", query, len(results))
     return results
+
+
+async def _fetch_adzuna_sequential(
+    client: httpx.AsyncClient,
+    app_id: str,
+    app_key: str,
+    queries: list[tuple[str, str]],
+) -> list[JobRawListing]:
+    """Run multiple Adzuna queries sequentially with a 0.5s gap to avoid burst rate limit.
+
+    Adzuna free tier has per-second rate limiting alongside the 50 req/day cap.
+    Running 8 queries in parallel triggers 429s. Sequential with a small
+    delay stays within burst limits while still completing in ~5 seconds.
+    """
+    all_results: list[JobRawListing] = []
+    for i, (query, where) in enumerate(queries):
+        if i > 0:
+            await asyncio.sleep(0.5)
+        batch = await _fetch_adzuna(client, app_id, app_key, query, where)
+        all_results.extend(batch)
+    return all_results
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -222,32 +244,19 @@ async def fetch_all_sources(
             _fetch_remotive(client, "machine learning"),
         ]
         if adzuna_app_id and adzuna_app_key:
-            logger.info("jobs_adzuna_enabled — adding Adzuna tasks")
-            # Queries tuned for junior/entry-level + mid-level ML/AI roles in DFW.
-            # Each call = 1 API request (50/day free). 8 queries x 2 calls/day = 16 RPD.
-            tasks.extend(
-                [
-                    _fetch_adzuna(
-                        client, adzuna_app_id, adzuna_app_key, "junior data scientist", "dallas"
-                    ),
-                    _fetch_adzuna(
-                        client, adzuna_app_id, adzuna_app_key, "entry level machine learning"
-                    ),
-                    _fetch_adzuna(
-                        client, adzuna_app_id, adzuna_app_key, "data scientist", "dallas"
-                    ),
-                    _fetch_adzuna(
-                        client, adzuna_app_id, adzuna_app_key, "machine learning engineer"
-                    ),
-                    _fetch_adzuna(client, adzuna_app_id, adzuna_app_key, "AI engineer", "dallas"),
-                    _fetch_adzuna(
-                        client, adzuna_app_id, adzuna_app_key, "data analyst AI", "dallas"
-                    ),
-                    _fetch_adzuna(client, adzuna_app_id, adzuna_app_key, "data engineer", "dallas"),
-                    _fetch_adzuna(
-                        client, adzuna_app_id, adzuna_app_key, "MLOps engineer", "dallas"
-                    ),
-                ]
+            logger.info("jobs_adzuna_enabled — adding Adzuna sequential batch")
+            # Queries run sequentially with 0.5s gaps to avoid Adzuna burst rate limit.
+            # 50 results/page, 5 queries = 5 API calls per invocation.
+            # Morning brief + on-demand = ~10 RPD out of 50 free.
+            adzuna_queries: list[tuple[str, str]] = [
+                ("data scientist", "dallas"),
+                ("machine learning engineer", "dallas"),
+                ("AI engineer", "dallas"),
+                ("data analyst", "dallas"),
+                ("data engineer", "dallas"),
+            ]
+            tasks.append(
+                _fetch_adzuna_sequential(client, adzuna_app_id, adzuna_app_key, adzuna_queries)
             )
         else:
             logger.warning("jobs_adzuna_skipped — no API credentials")
