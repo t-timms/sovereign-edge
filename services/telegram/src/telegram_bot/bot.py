@@ -283,9 +283,10 @@ class SovereignEdgeBot:
                 # Edit at most every 800 ms to stay within Telegram's rate limit
                 if time.monotonic() - last_edit >= _STREAM_EDIT_INTERVAL and buffer:
                     try:
-                        await placeholder.edit_text(
-                            _sanitize_markdown(buffer + " ▌"), parse_mode="HTML"
-                        )
+                        preview = _sanitize_markdown(buffer + " ▌")
+                        if len(preview) > 4000:
+                            preview = preview[:4000] + "…"
+                        await placeholder.edit_text(preview, parse_mode="HTML")
                         last_edit = time.monotonic()
                     except Exception:
                         logger.debug("stream_edit_failed", exc_info=True)
@@ -422,9 +423,10 @@ class SovereignEdgeBot:
                     break
                 if time.monotonic() - last_edit >= _STREAM_EDIT_INTERVAL and buffer:
                     try:
-                        await placeholder.edit_text(
-                            _sanitize_markdown(buffer + " ▌"), parse_mode="HTML"
-                        )
+                        preview = _sanitize_markdown(buffer + " ▌")
+                        if len(preview) > 4000:
+                            preview = preview[:4000] + "…"
+                        await placeholder.edit_text(preview, parse_mode="HTML")
                         last_edit = time.monotonic()
                     except Exception:
                         logger.debug("doc_stream_edit_failed", exc_info=True)

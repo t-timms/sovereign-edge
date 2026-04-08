@@ -368,6 +368,12 @@ async def _job_searcher(state: CareerState) -> dict[str, Any]:
         else:
             new_listings = raw_listings
 
+        # Cap listings sent to LLM — 53 listings inflate prompt and Gemini
+        # reasoning overhead. LLM picks top 5; 20 inputs is sufficient.
+        _MAX_LISTINGS_FOR_LLM = 20
+        if len(new_listings) > _MAX_LISTINGS_FOR_LLM:
+            new_listings = new_listings[:_MAX_LISTINGS_FOR_LLM]
+
         # ── Build combined context for LLM ─────────────────────────────────
         parts: list[str] = []
         if new_listings:
@@ -480,7 +486,7 @@ async def _strategist(state: CareerState) -> dict[str, Any]:
             f"{MORNING_PROMPT}"
         )
         user_content = body if state["search_results"] else MORNING_PROMPT
-        max_tokens = 4096
+        max_tokens = 16384
     else:
         user_input = f"<user_request>\n{state['query']}\n</user_request>"
         user_content = (
@@ -488,7 +494,7 @@ async def _strategist(state: CareerState) -> dict[str, Any]:
             if state["search_results"]
             else user_input
         )
-        max_tokens = 4096
+        max_tokens = 16384
 
     messages: list[dict[str, str]] = [
         {"role": "system", "content": system_prompt},
