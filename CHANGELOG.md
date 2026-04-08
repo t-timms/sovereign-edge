@@ -20,6 +20,9 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Startup warning when `SE_CAREER_RESUME_PATH` directory is missing.
 
 ### Fixed
+- `packages/observability/src/observability/logging.py`: stdlib `logging.getLogger()` calls (used by search, career, job_store modules) had no handlers — all INFO-level diagnostic logs were silently dropped. Added structlog-stdlib bridge via `ProcessorFormatter` so all modules output JSON to the same journalctl stream.
+- `agents/career/src/career/subgraph.py`: Job deduplication now only applies to morning briefs. On-demand queries ("find me ML jobs") show all available positions regardless of dedup state — fixes 0-result responses when all API results had been seen during prior testing.
+- `agents/career/src/career/subgraph.py`: Gemini `max_tokens` bumped from 900/1500 to 4096 — Gemini 2.5 Flash reasoning tokens (~1400) consumed the budget, leaving <100 tokens for `JobListingResponse` JSON. Caused `IncompleteOutputException` and fallback to unstructured path.
 - `packages/llm/src/llm/gateway.py`: Gemini structured output now uses `Mode.JSON` instead of `Mode.TOOLS` — fixes `choices=[]` empty response from Gemini that forced every career query into the unstructured fallback path. Other providers continue using `Mode.TOOLS`.
 - `packages/search/src/search/jina.py`: Jina error logging now includes `error_type` (exception class name) — was logging empty strings on connection failures. Timeout bumped from 25s to 35s for ARM64/Jetson where DNS resolution is slower.
 - `agents/career/src/career/subgraph.py`: Removed hallucination instruction from `build_system_prompt()` that told the LLM to generate fake job listings when no API results were available. Replaced with strict "only list from provided search results" rule.
@@ -27,7 +30,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `packages/search/src/search/jobs.py`: Expanded The Muse query set from 3 to 5 — added "Engineering" (DFW + Remote) and "Data & Analytics" (DFW) categories to capture ML Engineer roles not listed under "Data Science". Removed "Software Engineer" (too noisy for ML filtering).
 
 ### Changed
-- `agents/career/src/career/subgraph.py`: `_job_searcher` node now runs The Muse + Remotive + Adzuna + Jina in parallel (was Jina-only). Deduplicates via `JobStore` before passing to strategist. Loads resume profile via `asyncio.to_thread`. `_MAX_SEARCH_CHARS` raised from 10K to 12K.
+- `agents/career/src/career/subgraph.py`: `_job_searcher` node now runs The Muse + Remotive + Adzuna + Jina in parallel (was Jina-only). Deduplicates via `JobStore` on morning briefs only (on-demand shows all). Loads resume profile via `asyncio.to_thread`. `_MAX_SEARCH_CHARS` raised from 10K to 12K.
 - `agents/career/src/career/subgraph.py`: `build_system_prompt()` now accepts `resume_context` and injects candidate skill profile into LLM system prompt.
 - `agents/career/src/career/subgraph.py`: `CareerState` adds `new_job_count` and `resume_context` fields. Morning brief header shows new job count.
 - `agents/intelligence/src/intelligence/subgraph.py`: `MORNING_PROMPT` updated with portfolio gap check instruction.

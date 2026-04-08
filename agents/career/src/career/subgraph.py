@@ -354,11 +354,19 @@ async def _job_searcher(state: CareerState) -> dict[str, Any]:
         resume_profile = gathered[1] if not isinstance(gathered[1], Exception) else None
         jina_texts = [r for r in gathered[2:] if isinstance(r, str) and r]
 
-        # ── Deduplication ─────────────────────────────────────────────────
+        # ── Deduplication (morning brief only) ────────────────────────────
+        # Morning briefs dedup to avoid repeating yesterday's jobs.
+        # On-demand queries show all available positions — the user is
+        # explicitly asking for what's out there.
         db_path = s.career_job_db_path if s.career_job_db_path else (s.ssd_root / "jobs.db")
         store = JobStore(db_path)
-        new_listings = store.filter_new(raw_listings, dedup_window_days=s.career_dedup_window_days)
-        store.mark_seen(new_listings)
+        if state["is_morning_brief"]:
+            new_listings = store.filter_new(
+                raw_listings, dedup_window_days=s.career_dedup_window_days
+            )
+            store.mark_seen(new_listings)
+        else:
+            new_listings = raw_listings
 
         # ── Build combined context for LLM ─────────────────────────────────
         parts: list[str] = []

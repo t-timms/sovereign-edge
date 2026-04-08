@@ -2,22 +2,39 @@
 structlog configuration — ~5MB RAM, JSON output.
 
 Every log line includes: timestamp, level, expert, model, trace_id.
+Also bridges stdlib logging.getLogger() so all modules (search, career, etc.)
+output to the same stream visible in journalctl.
 """
 
 from __future__ import annotations
+
+import logging
+import sys
 
 import structlog
 
 
 def setup_logging(debug: bool = False) -> None:
-    """Configure structlog for the application."""
+    """Configure structlog + stdlib logging for the application.
+
+    structlog loggers (via get_logger) produce JSON directly.
+    stdlib loggers (via logging.getLogger) are bridged through structlog
+    processors so their output is also JSON-formatted and visible in journalctl.
+    """
+    log_level = logging.DEBUG if debug else logging.INFO
+
+    shared_processors: list[structlog.types.Processor] = [
+        structlog.contextvars.merge_contextvars,
+        structlog.processors.add_log_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+    ]
+
+    # ── structlog loggers ─────────────────────────────────────────────────
     structlog.configure(
         processors=[
-            structlog.contextvars.merge_contextvars,
-            structlog.processors.add_log_level,
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.format_exc_info,
+            *shared_processors,
             structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.make_filtering_bound_logger(
@@ -27,6 +44,25 @@ def setup_logging(debug: bool = False) -> None:
         logger_factory=structlog.PrintLoggerFactory(),
         cache_logger_on_first_use=True,
     )
+
+    # ── stdlib logging bridge ─────────────────────────────────────────────
+    # Modules that use logging.getLogger(__name__) (search.jobs, job_store,
+    # career subgraph, etc.) were silently dropped because no handler existed.
+    # This bridges them through structlog's JSON formatter.
+    formatter = structlog.stdlib.ProcessorFormatter(
+        processors=[
+            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+            structlog.processors.JSONRenderer(),
+        ],
+        foreign_pre_chain=shared_processors,
+    )
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(formatter)
+
+    root_logger = logging.getLogger()
+    root_logger.handlers.clear()
+    root_logger.addHandler(handler)
+    root_logger.setLevel(log_level)
 
 
 def get_logger(name: str, **initial_context: str) -> structlog.BoundLogger:
