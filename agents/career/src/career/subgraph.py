@@ -536,6 +536,32 @@ async def _strategist(state: CareerState) -> dict[str, Any]:
         routing=state["routing"],
         expert="career",
     )
+
+    # Some LLMs (Mistral) return valid JSON wrapped in code fences instead of
+    # natural language. Try to salvage it into structured format.
+    import json
+    import re
+
+    stripped = re.sub(r"^```(?:json)?\s*\n?", "", result.strip(), flags=re.MULTILINE)
+    stripped = re.sub(r"\n?```\s*$", "", stripped.strip(), flags=re.MULTILINE)
+    if stripped.lstrip().startswith("{"):
+        try:
+            data = json.loads(stripped)
+            salvaged = JobListingResponse(**data)
+            eligible = [j for j in salvaged.jobs if j.is_dfw_eligible]
+            eligible = await _validate_listings(eligible)
+            salvaged.jobs = eligible
+            logger.info("career_strategist_json_salvaged jobs=%d", len(eligible))
+            return {
+                "response": format_job_listings(salvaged),
+                "model_used": "unstructured-json-salvaged",
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "cost_usd": 0.0,
+            }
+        except (json.JSONDecodeError, ValueError, KeyError):
+            pass  # Not valid JSON — use raw text as-is
+
     return {
         "response": result,
         "model_used": "",

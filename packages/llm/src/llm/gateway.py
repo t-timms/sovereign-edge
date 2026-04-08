@@ -74,6 +74,7 @@ class ProviderConfig:
     priority: int  # Lower = tried first
     env_key: str  # Environment variable name for API key
     supports_structured: bool = True  # False for models that refuse tool/function calling
+    max_output_tokens: int = 32768  # Provider-specific max_tokens ceiling
 
 
 def _build_providers(s: Settings) -> list[ProviderConfig]:
@@ -86,6 +87,7 @@ def _build_providers(s: Settings) -> list[ProviderConfig]:
             priority=1,
             env_key="GROQ_API_KEY",
             supports_structured=False,  # Llama 4 Scout generates free-text instead of tool calls
+            max_output_tokens=8192,  # Groq rejects max_tokens > 8192 with BadRequestError
         ),
         ProviderConfig(
             model="gemini/gemini-2.5-flash",
@@ -345,10 +347,11 @@ class LLMGateway:
                 continue
 
             try:
+                effective_max_tokens = min(max_tokens, provider.max_output_tokens)
                 response = await litellm.acompletion(  # type: ignore[attr-defined]
                     model=provider.model,
                     messages=messages,
-                    max_tokens=max_tokens,
+                    max_tokens=effective_max_tokens,
                     temperature=temperature,
                     stream=True,
                     stream_options={"include_usage": True},
@@ -454,6 +457,7 @@ class LLMGateway:
             else instructor_module.Mode.TOOLS
         )
         client = instructor_module.from_litellm(litellm.acompletion, mode=mode)
+        effective_max_tokens = min(max_tokens, provider.max_output_tokens)
 
         for attempt in range(_MAX_RETRIES):
             try:
@@ -462,7 +466,7 @@ class LLMGateway:
                     model=provider.model,
                     messages=messages,
                     response_model=response_model,
-                    max_tokens=max_tokens,
+                    max_tokens=effective_max_tokens,
                     temperature=temperature,
                     max_retries=2,  # instructor-level validation retries
                     timeout=30,
@@ -551,6 +555,7 @@ class LLMGateway:
         Transient errors (rate limit, timeout, unavailable) are retried up to
         _MAX_RETRIES times before raising. Fatal errors raise immediately.
         """
+        effective_max_tokens = min(max_tokens, provider.max_output_tokens)
         last_exc: Exception = RuntimeError("no attempts made")
         for attempt in range(_MAX_RETRIES):
             try:
@@ -558,7 +563,7 @@ class LLMGateway:
                 response = await litellm.acompletion(  # type: ignore[attr-defined]
                     model=provider.model,
                     messages=messages,
-                    max_tokens=max_tokens,
+                    max_tokens=effective_max_tokens,
                     temperature=temperature,
                     timeout=30,
                 )

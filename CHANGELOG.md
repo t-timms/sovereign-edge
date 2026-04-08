@@ -20,6 +20,10 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Startup warning when `SE_CAREER_RESUME_PATH` directory is missing.
 
 ### Fixed
+- `packages/llm/src/llm/gateway.py`: Per-provider `max_output_tokens` cap — Groq rejects `max_tokens > 8192` with `BadRequestError`. Gateway now clamps `max_tokens` to `min(requested, provider.max_output_tokens)` in `_call_with_retry()`, `stream_complete()`, and `_call_structured_with_retry()`. Groq capped at 8192; others default to 32768.
+- `agents/career/src/career/subgraph.py`: Unstructured fallback now detects JSON wrapped in code fences (Mistral returns ````json {...}``` `` instead of natural language) and salvages it into `JobListingResponse` structured format. Falls through to raw text if JSON parsing fails.
+- `services/telegram/src/telegram_bot/bot.py`: `_sanitize_markdown()` now strips ````json`/````html`/etc. code block fences before processing — prevents JSON property names from being converted to `<b>` tags via the "Title:" regex.
+- `services/telegram/src/telegram_bot/bot.py`: Streaming preview truncation is now tag-safe — `_safe_truncate()` avoids cutting inside HTML tags (e.g. `<b` with no `>`) and runs `_fix_html_nesting()` on the truncated result. Fixes `BadRequest: Can't find end tag` errors.
 - `services/telegram/src/telegram_bot/bot.py`: `_sanitize_markdown()` markdown-to-HTML regexes could produce overlapping tags (`<b>...<i>...</b>...</i>`) when LLM output had mixed `*` and `_` formatting — caused Telegram `BadRequest: Can't parse entities`. Fixed regex character classes to exclude `<>` (prevents cross-tag matching) and added `_fix_html_nesting()` safety net that strips `<b>`/`<i>` tags when nesting is invalid.
 - `packages/observability/src/observability/logging.py`: stdlib `logging.getLogger()` calls (used by search, career, job_store modules) had no handlers — all INFO-level diagnostic logs were silently dropped. Added structlog-stdlib bridge via `ProcessorFormatter` so all modules output JSON to the same journalctl stream.
 - `agents/career/src/career/subgraph.py`: Job deduplication now only applies to morning briefs. On-demand queries ("find me ML jobs") show all available positions regardless of dedup state — fixes 0-result responses when all API results had been seen during prior testing.
@@ -37,7 +41,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `agents/career/src/career/subgraph.py`: `build_system_prompt()` now accepts `resume_context` and injects candidate skill profile into LLM system prompt.
 - `agents/career/src/career/subgraph.py`: `CareerState` adds `new_job_count` and `resume_context` fields. Morning brief header shows new job count.
 - `agents/intelligence/src/intelligence/subgraph.py`: `MORNING_PROMPT` updated with portfolio gap check instruction.
-- Package versions bumped: `sovereign-edge-search 0.3.7`, `sovereign-edge-career 0.3.7`.
+- Package versions bumped: `sovereign-edge-llm 0.3.9`, `sovereign-edge-career 0.3.9`, `sovereign-edge-telegram 0.3.9`.
 
 ### Added (prior)
 - `CLAUDE.md` (project root): comprehensive Claude Code guide — architecture, key files, running, testing, deployment, known constraints, and per-change conventions.

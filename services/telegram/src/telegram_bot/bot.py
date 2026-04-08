@@ -283,9 +283,7 @@ class SovereignEdgeBot:
                 # Edit at most every 800 ms to stay within Telegram's rate limit
                 if time.monotonic() - last_edit >= _STREAM_EDIT_INTERVAL and buffer:
                     try:
-                        preview = _sanitize_markdown(buffer + " ▌")
-                        if len(preview) > 4000:
-                            preview = preview[:4000] + "…"
+                        preview = _safe_truncate(_sanitize_markdown(buffer + " ▌"), 4000)
                         await placeholder.edit_text(preview, parse_mode="HTML")
                         last_edit = time.monotonic()
                     except Exception:
@@ -423,9 +421,7 @@ class SovereignEdgeBot:
                     break
                 if time.monotonic() - last_edit >= _STREAM_EDIT_INTERVAL and buffer:
                     try:
-                        preview = _sanitize_markdown(buffer + " ▌")
-                        if len(preview) > 4000:
-                            preview = preview[:4000] + "…"
+                        preview = _safe_truncate(_sanitize_markdown(buffer + " ▌"), 4000)
                         await placeholder.edit_text(preview, parse_mode="HTML")
                         last_edit = time.monotonic()
                     except Exception:
@@ -518,6 +514,10 @@ def _sanitize_markdown(text: str) -> str:
     """
     import html
     import re
+
+    # Strip code block fences — some LLMs (Mistral) wrap responses in ```json ... ```
+    text = re.sub(r"^```(?:json|html|markdown|text)?\s*\n?", "", text, flags=re.MULTILINE)
+    text = re.sub(r"\n?```\s*$", "", text, flags=re.MULTILINE)
 
     # Strip trailing boilerplate
     text = re.sub(
@@ -623,6 +623,19 @@ def _fix_html_nesting(text: str) -> str:
     if any(t in ("b", "i") for t in stack):
         return re.sub(r"</?[bi]>", "", text)
     return text
+
+
+def _safe_truncate(text: str, limit: int) -> str:
+    """Truncate text without cutting inside an HTML tag, then fix nesting."""
+    if len(text) <= limit:
+        return text
+    text = text[:limit]
+    # Don't cut in the middle of an HTML tag — find last unclosed '<'
+    last_lt = text.rfind("<")
+    last_gt = text.rfind(">")
+    if last_lt > last_gt:
+        text = text[:last_lt]
+    return _fix_html_nesting(text) + "…"
 
 
 def _split(text: str, size: int) -> list[str]:
