@@ -65,6 +65,18 @@ _ROUTABLE_EXPERTS: list[str] = [
     ExpertName.GOALS,
 ]
 
+# Intents that always route to a single expert — director LLM is never consulted.
+# These have unambiguous domain ownership; asking an LLM to plan routing adds
+# latency and risks cross-domain contamination (e.g. career+intelligence bleed).
+_SINGLE_EXPERT_INTENTS: frozenset[Intent] = frozenset(
+    {
+        Intent.SPIRITUAL,
+        Intent.CAREER,
+        Intent.GOALS,
+        Intent.CREATIVE,
+    }
+)
+
 _DIRECTOR_SYSTEM = """\
 You are the Director of Sovereign Edge — a multi-expert personal AI system.
 Your job is to analyse the user's request and produce a routing plan.
@@ -344,6 +356,15 @@ class DirectorGraph:
 
     async def run(self, request: TaskRequest) -> TaskResult:
         """Execute the director graph and return a TaskResult."""
+        # Fast-path: unambiguous single-domain intents skip the planning LLM entirely.
+        # Only INTELLIGENCE queries may need multi-expert chains (e.g. research → write post).
+        if request.intent in _SINGLE_EXPERT_INTENTS:
+            expert_name = _intent_to_expert(request.intent)
+            expert = self._experts.get(expert_name)
+            if expert is not None:
+                logger.info("director_fast_path expert=%s intent=%s", expert_name, request.intent)
+                return await expert.process(request)
+
         if self._graph is None:
             expert_name = _intent_to_expert(request.intent)
             expert = self._experts.get(expert_name) or next(iter(self._experts.values()), None)
