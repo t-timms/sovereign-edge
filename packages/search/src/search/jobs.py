@@ -72,11 +72,11 @@ async def _fetch_muse(client: httpx.AsyncClient) -> list[JobRawListing]:
     """Fetch ML-relevant jobs from The Muse (no auth required)."""
     results: list[JobRawListing] = []
     query_params = [
-        {"category": "Data Science", "location": "Dallas, TX", "page": 1, "descending": "true"},
-        {"category": "Data Science", "location": "Remote", "page": 1, "descending": "true"},
-        {"category": "Engineering", "location": "Dallas, TX", "page": 1, "descending": "true"},
-        {"category": "Engineering", "location": "Remote", "page": 1, "descending": "true"},
-        {"category": "Data & Analytics", "location": "Dallas, TX", "page": 1, "descending": "true"},
+        {"category": "Data Science", "location": "Dallas, TX", "page": 0, "descending": "true"},
+        {"category": "Data Science", "location": "Remote", "page": 0, "descending": "true"},
+        {"category": "Engineering", "location": "Dallas, TX", "page": 0, "descending": "true"},
+        {"category": "Engineering", "location": "Remote", "page": 0, "descending": "true"},
+        {"category": "Data & Analytics", "location": "Dallas, TX", "page": 0, "descending": "true"},
     ]
     for params in query_params:
         try:
@@ -166,7 +166,7 @@ async def _fetch_adzuna(
                 "distance": 50,
                 "results_per_page": 20,
                 "sort_by": "date",
-                "max_days_old": 7,
+                "max_days_old": 14,
             },
         )
         resp.raise_for_status()
@@ -211,16 +211,20 @@ async def fetch_all_sources(
             _fetch_remotive(client, "LLM AI engineer"),
         ]
         if adzuna_app_id and adzuna_app_key:
+            logger.info("jobs_adzuna_enabled — adding Adzuna tasks")
             tasks.extend(
                 [
                     _fetch_adzuna(
                         client, adzuna_app_id, adzuna_app_key, "machine learning engineer"
                     ),
+                    _fetch_adzuna(client, adzuna_app_id, adzuna_app_key, "AI engineer", "dallas"),
                     _fetch_adzuna(
                         client, adzuna_app_id, adzuna_app_key, "AI engineer LLM", "plano"
                     ),
                 ]
             )
+        else:
+            logger.warning("jobs_adzuna_skipped — no API credentials")
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
     combined: list[JobRawListing] = []
