@@ -10,6 +10,7 @@ build/
 # uv.lock
 
 # Secrets (NEVER commit plaintext secrets)
+.env
 secrets/env.yaml
 secrets/*.key
 secrets/.env.decrypted
