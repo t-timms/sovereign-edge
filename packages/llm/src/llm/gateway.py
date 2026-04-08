@@ -447,7 +447,13 @@ class LLMGateway:
         instructor_module: Any,  # noqa: ANN401
     ) -> _ModelT | None:
         """Attempt one provider with instructor validation. Returns None to try next."""
-        client = instructor_module.from_litellm(litellm.acompletion)
+        # Gemini returns choices=[] in TOOLS mode — use JSON mode instead
+        mode = (
+            instructor_module.Mode.JSON
+            if "gemini" in provider.model
+            else instructor_module.Mode.TOOLS
+        )
+        client = instructor_module.from_litellm(litellm.acompletion, mode=mode)
 
         for attempt in range(_MAX_RETRIES):
             try:

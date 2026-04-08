@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 _SEARCH_BASE = "https://s.jina.ai"
 _READER_BASE = "https://r.jina.ai"
-_TIMEOUT = 25.0
+_TIMEOUT = 35.0
 _MAX_CHARS = 6_000  # cap to fit LLM context window
 _MAX_RETRIES = 2
 _RETRY_BASE_DELAY = 1.0
@@ -170,10 +170,11 @@ async def search(query: str, max_results: int = 5) -> str:
                 return ""  # 4xx — don't retry
         except httpx.HTTPError as exc:
             logger.warning(
-                "jina_search_failed query=%r attempt=%d error=%s",
+                "jina_search_failed query=%r attempt=%d error_type=%s error=%s",
                 query,
                 attempt + 1,
-                exc,
+                type(exc).__name__,
+                str(exc) or "empty",
             )
         if attempt < _MAX_RETRIES:
             await asyncio.sleep(_RETRY_BASE_DELAY * (2**attempt))
@@ -211,10 +212,11 @@ async def fetch(url: str) -> str:
                 return ""  # 4xx — don't retry
         except httpx.HTTPError as exc:
             logger.warning(
-                "jina_fetch_failed url=%r attempt=%d error=%s",
+                "jina_fetch_failed url=%r attempt=%d error_type=%s error=%s",
                 url,
                 attempt + 1,
-                exc,
+                type(exc).__name__,
+                str(exc) or "empty",
             )
         if attempt < _MAX_RETRIES:
             await asyncio.sleep(_RETRY_BASE_DELAY * (2**attempt))

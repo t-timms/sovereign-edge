@@ -20,6 +20,8 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Startup warning when `SE_CAREER_RESUME_PATH` directory is missing.
 
 ### Fixed
+- `packages/llm/src/llm/gateway.py`: Gemini structured output now uses `Mode.JSON` instead of `Mode.TOOLS` — fixes `choices=[]` empty response from Gemini that forced every career query into the unstructured fallback path. Other providers continue using `Mode.TOOLS`.
+- `packages/search/src/search/jina.py`: Jina error logging now includes `error_type` (exception class name) — was logging empty strings on connection failures. Timeout bumped from 25s to 35s for ARM64/Jetson where DNS resolution is slower.
 - `agents/career/src/career/subgraph.py`: Removed hallucination instruction from `build_system_prompt()` that told the LLM to generate fake job listings when no API results were available. Replaced with strict "only list from provided search results" rule.
 - `agents/career/src/career/subgraph.py`: Added early return in `_strategist()` when `search_results == ""` — returns an honest "no live jobs found" message without calling the LLM. Prevents token waste and eliminates the hallucination path entirely.
 - `packages/search/src/search/jobs.py`: Expanded The Muse query set from 3 to 5 — added "Engineering" (DFW + Remote) and "Data & Analytics" (DFW) categories to capture ML Engineer roles not listed under "Data Science". Removed "Software Engineer" (too noisy for ML filtering).
