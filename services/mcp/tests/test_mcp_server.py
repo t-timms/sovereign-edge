@@ -70,7 +70,7 @@ async def test_get_memory_empty() -> None:
         mock_cls.return_value.get_all.return_value = []
         result = await get_memory("anything")
 
-    assert "No episodic memory" in result
+    assert "No memory entries" in result
 
 
 # ── get_skills tests ───────────────────────────────────────────────────────────
