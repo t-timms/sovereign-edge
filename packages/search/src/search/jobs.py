@@ -69,7 +69,7 @@ def _is_ml_relevant(title: str) -> bool:
 
 
 async def _fetch_muse(client: httpx.AsyncClient) -> list[JobRawListing]:
-    """Fetch Data Science and Software Engineer jobs from The Muse (no auth required)."""
+    """Fetch ML-relevant jobs from The Muse (no auth required)."""
     results: list[JobRawListing] = []
     query_params = [
         {"category": "Data Science", "location": "Dallas, TX", "page": 1, "descending": "true"},
