@@ -101,7 +101,7 @@ class Settings(BaseSettings):
     career_target_location: str = "Dallas Fort Worth TX"
     career_target_cities: str = "Dallas,Fort Worth,Plano,Irving,Frisco,Allen,McKinney,Richardson,Arlington,Southlake,Addison,Carrollton"  # noqa: E501
     career_target_roles: str = (
-        "ML Engineer, AI Engineer, Data Scientist, Data Engineer, Data Analyst, MLOps Engineer"  # noqa: E501
+        "ML Engineer, AI Engineer, Data Scientist, Data Engineer, Data Analyst, MLOps Engineer"
     )
     career_differentiators: str = ""  # comma-separated; empty = generic coaching
 
