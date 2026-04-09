@@ -6,51 +6,68 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --extra dev
+      - run: uv run ruff check src/ tests/
+      - run: uv run ruff format --check src/ tests/
 
-      - uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.11"
+  type-check:
+    name: Type Check
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --extra dev
+      - run: uv run mypy --ignore-missing-imports src/
+        continue-on-error: true
 
-      - name: Install dependencies
-        run: uv sync --all-packages
-
-      - name: Ruff check
-        run: uv run ruff check .
-
-      - name: Ruff format
-        run: uv run ruff format . --check
+  security:
+    name: Security
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --extra dev
+      - run: uv pip install pip-audit bandit
+      - name: Audit dependencies for CVEs
+        run: uv run pip-audit
+      - name: Static security analysis
+        run: uv run bandit -r src/ -ll --quiet
 
   test:
-    name: Test
+    name: Test (Python ${{ matrix.python-version }})
+    needs: [type-check, security]
     runs-on: ubuntu-latest
-    needs: lint
-    env:
-      # Dummy values — tests must mock all external I/O
-      SE_TELEGRAM_BOT_TOKEN: ci_dummy_token
-      SE_TELEGRAM_OWNER_CHAT_ID: "123456789"
-
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: uv sync --all-packages
-
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --extra dev
       - name: Run tests with coverage
-        run: |
-          uv run pytest -q --tb=short \
-            --cov=packages --cov=agents --cov=services \
-            --cov-report=term-missing \
-            --ignore=evals \
-            --ignore=agents/creative/tests \
-            --ignore=agents/spiritual/tests \
-            --ignore=packages/observability/tests
+        run: >
+          uv run pytest tests/ -v --tb=short -x
+          --cov=src --cov-report=term-missing
+          --cov-fail-under=50
+          --junitxml=test-results.xml
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.python-version }}
+          path: test-results.xml
