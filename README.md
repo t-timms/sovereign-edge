@@ -45,6 +45,12 @@ Every message is classified in **<10ms** by an ONNX-quantized DistilBERT router 
 
 ---
 
+## Why
+
+Cloud AI services see everything you ask them. Sovereign Edge keeps your conversations, decisions, and personal data entirely on your own hardware — a Jetson Orin Nano running 5 specialized LangGraph agents. No data leaves your network. Multi-provider LLM routing (4 cloud providers + local Ollama) means you get the best model for each task without vendor lock-in. Built with production infrastructure: SOPS+Age encryption, systemd services, ONNX intent routing under 10ms, structured observability.
+
+---
+
 ## Expert Agents
 
 | Expert | Domain | Live Data Source | Morning Brief |
