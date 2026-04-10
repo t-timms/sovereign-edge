@@ -8,7 +8,7 @@
 
 <br/>
 
-[![CI](https://github.com/omnipotence-eth/sovereign-edge/actions/workflows/ci.yml/badge.svg)](https://github.com/omnipotence-eth/sovereign-edge/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/omnipotence-eth/sovereign-edge/ci.yml?style=flat-square&label=CI)](https://github.com/omnipotence-eth/sovereign-edge/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64?style=flat-square&logo=ruff&logoColor=black)](https://github.com/astral-sh/ruff)
 [![LangGraph](https://img.shields.io/badge/built%20with-LangGraph-FF6B35?style=flat-square)](https://github.com/langchain-ai/langgraph)
