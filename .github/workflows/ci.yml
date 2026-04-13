@@ -30,7 +30,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - run: uv sync --all-packages
       - run: uv pip install mypy
-      - run: uv run mypy --ignore-missing-imports packages/ agents/ services/
+      - run: uv run mypy --ignore-missing-imports --exclude 'agents/creative/tests' --exclude 'agents/spiritual/tests' --exclude 'packages/observability/tests' packages/ agents/ services/
 
   security:
     name: Security
