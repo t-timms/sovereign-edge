@@ -25,6 +25,9 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `packages/core/src/core/config.py`: `SE_STORAGE_PRUNE_TRACES_DAYS` (default 90) and `SE_STORAGE_PRUNE_CONVERSATIONS_DAYS` (default 30) settings.
 - `agents/orchestrator/src/orchestrator/main.py`: Daily 04:00 CT cron job runs both prune methods automatically.
 
+### Changed
+- `.github/workflows/ci.yml`: Add `CVE-2026-40260` (pypdf) to pip-audit ignore list — pypdf 4.3.1→6.x is a major bump, deferred until migration.
+
 ### Security
 - `packages/search/src/search/jobs.py`: Redact API credentials from httpx error log output — Adzuna `app_id` and `app_key` were included in `HTTPStatusError` exception messages logged via `exc_info=True`. Added `_redact_url()` helper that strips sensitive query params before logging. Prevents credential leakage to journalctl.
 - `services/whatsapp/src/whatsapp/bot.py`: Add input length validation (2000-char cap) to WhatsApp handler — Telegram and Discord both enforced `_MAX_INPUT_CHARS` but WhatsApp had no length check, allowing unbounded input to reach the LLM gateway.
