@@ -20,6 +20,7 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Startup warning when `SE_CAREER_RESUME_PATH` directory is missing.
 
 ### Fixed
+- `packages/llm/src/llm/gateway.py`: Thinking model token budget — Gemini 2.5 Flash spends ~75% of `max_tokens` on reasoning, leaving too few for actual JSON output (structured calls returned `'{\n  '` and hit `IncompleteOutputException`). Added `is_thinking_model` flag to `ProviderConfig`; gateway now multiplies requested `max_tokens` by 4x for thinking models across `_call_with_retry()`, `stream_complete()`, and `_call_structured_with_retry()`. Timeout bumped from 30s to 60s for structured thinking calls.
 - `packages/llm/src/llm/gateway.py`: Per-provider `max_output_tokens` cap — Groq rejects `max_tokens > 8192` with `BadRequestError`. Gateway now clamps `max_tokens` to `min(requested, provider.max_output_tokens)` in `_call_with_retry()`, `stream_complete()`, and `_call_structured_with_retry()`. Groq capped at 8192; others default to 32768.
 - `agents/career/src/career/subgraph.py`: Unstructured fallback now detects JSON wrapped in code fences (Mistral returns ````json {...}``` `` instead of natural language) and salvages it into `JobListingResponse` structured format. Falls through to raw text if JSON parsing fails.
 - `services/telegram/src/telegram_bot/bot.py`: `_sanitize_markdown()` now strips ````json`/````html`/etc. code block fences before processing — prevents JSON property names from being converted to `<b>` tags via the "Title:" regex.

@@ -75,6 +75,7 @@ class ProviderConfig:
     env_key: str  # Environment variable name for API key
     supports_structured: bool = True  # False for models that refuse tool/function calling
     max_output_tokens: int = 32768  # Provider-specific max_tokens ceiling
+    is_thinking_model: bool = False  # Thinking models burn tokens on reasoning — need higher budget
 
 
 def _build_providers(s: Settings) -> list[ProviderConfig]:
@@ -95,6 +96,7 @@ def _build_providers(s: Settings) -> list[ProviderConfig]:
             tpd=250_000,
             priority=2,
             env_key="GOOGLE_API_KEY",
+            is_thinking_model=True,  # 2.5 Flash uses ~75% of tokens on reasoning
         ),
         ProviderConfig(
             model="cerebras/llama3.3-70b",
@@ -347,7 +349,8 @@ class LLMGateway:
                 continue
 
             try:
-                effective_max_tokens = min(max_tokens, provider.max_output_tokens)
+                budget = max_tokens * 4 if provider.is_thinking_model else max_tokens
+                effective_max_tokens = min(budget, provider.max_output_tokens)
                 response = await litellm.acompletion(  # type: ignore[attr-defined]
                     model=provider.model,
                     messages=messages,
@@ -457,11 +460,15 @@ class LLMGateway:
             else instructor_module.Mode.TOOLS
         )
         client = instructor_module.from_litellm(litellm.acompletion, mode=mode)
-        effective_max_tokens = min(max_tokens, provider.max_output_tokens)
+        # Thinking models (e.g. Gemini 2.5 Flash) spend ~75% of tokens on reasoning.
+        # Multiply by 4x so the actual JSON output gets the full requested budget.
+        budget = max_tokens * 4 if provider.is_thinking_model else max_tokens
+        effective_max_tokens = min(budget, provider.max_output_tokens)
 
         for attempt in range(_MAX_RETRIES):
             try:
                 start = time.monotonic()
+                timeout = 60 if provider.is_thinking_model else 30
                 result = await client.chat.completions.create(
                     model=provider.model,
                     messages=messages,
@@ -469,7 +476,7 @@ class LLMGateway:
                     max_tokens=effective_max_tokens,
                     temperature=temperature,
                     max_retries=2,  # instructor-level validation retries
-                    timeout=30,
+                    timeout=timeout,
                 )
                 elapsed = (time.monotonic() - start) * 1000
                 logger.info(
@@ -555,7 +562,8 @@ class LLMGateway:
         Transient errors (rate limit, timeout, unavailable) are retried up to
         _MAX_RETRIES times before raising. Fatal errors raise immediately.
         """
-        effective_max_tokens = min(max_tokens, provider.max_output_tokens)
+        budget = max_tokens * 4 if provider.is_thinking_model else max_tokens
+        effective_max_tokens = min(budget, provider.max_output_tokens)
         last_exc: Exception = RuntimeError("no attempts made")
         for attempt in range(_MAX_RETRIES):
             try:
