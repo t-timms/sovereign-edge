@@ -30,8 +30,9 @@ except ImportError:  # pragma: no cover
 logger = logging.getLogger(__name__)
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
+# Loaded from versioned YAML (prompts/spiritual/v*.yaml) with inline fallback.
 
-SYSTEM_PROMPT = """\
+_FALLBACK_SYSTEM = """\
 OUTPUT FORMAT — MANDATORY:
 Your responses are delivered via Telegram, which only renders a limited Markdown
 subset. You must follow these rules exactly or the output will be unreadable.
@@ -64,13 +65,23 @@ Format scripture quotes in italics with full citation
 (e.g., _"For God so loved the world..."_ — John 3:16 KJV).\
 """
 
-DEVOTIONAL_PROMPT = """\
+_FALLBACK_DEVOTIONAL = """\
 Using the scripture verse above as your anchor, write a brief morning devotional:
 1. Quote the verse exactly.
 2. 2-3 sentences of reflection connecting it to daily life.
 3. A one-sentence prayer.
 Keep it under 120 words. Warm and personal in tone.\
 """
+
+try:
+    from core.prompts import get_prompt_field, get_system_prompt
+
+    SYSTEM_PROMPT = get_system_prompt("spiritual") or _FALLBACK_SYSTEM
+    DEVOTIONAL_PROMPT = get_prompt_field("spiritual", "devotional_prompt") or _FALLBACK_DEVOTIONAL
+except Exception:
+    logger.debug("prompt_loader_unavailable — using inline fallback")
+    SYSTEM_PROMPT = _FALLBACK_SYSTEM
+    DEVOTIONAL_PROMPT = _FALLBACK_DEVOTIONAL
 
 
 # ── State ─────────────────────────────────────────────────────────────────────

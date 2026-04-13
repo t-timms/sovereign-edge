@@ -74,8 +74,9 @@ _RELEVANCE_KEYWORDS: frozenset[str] = frozenset(
 )
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
+# Loaded from versioned YAML (prompts/intelligence/v*.yaml) with inline fallback.
 
-SYSTEM_PROMPT = """\
+_FALLBACK_SYSTEM = """\
 OUTPUT FORMAT — MANDATORY:
 Your responses are delivered via Telegram, which only renders a limited Markdown
 subset. You must follow these rules exactly or the output will be unreadable.
@@ -108,7 +109,7 @@ developments, and local tech industry news.
 Be precise, cite sources, and flag uncertainty explicitly.\
 """
 
-MORNING_PROMPT = """\
+_FALLBACK_MORNING = """\
 Based on the live research data above, generate a concise intelligence briefing
 (≤ 250 words):
 1. One significant AI/ML development from the papers above worth knowing today.
@@ -120,6 +121,16 @@ Based on the live research data above, generate a concise intelligence briefing
    Omit section 4 entirely if all papers already match an existing repo.
 Be specific. Cite paper titles and link them.\
 """
+
+try:
+    from core.prompts import get_prompt_field, get_system_prompt
+
+    SYSTEM_PROMPT = get_system_prompt("intelligence") or _FALLBACK_SYSTEM
+    MORNING_PROMPT = get_prompt_field("intelligence", "morning_prompt") or _FALLBACK_MORNING
+except Exception:
+    logger.debug("prompt_loader_unavailable — using inline fallback")
+    SYSTEM_PROMPT = _FALLBACK_SYSTEM
+    MORNING_PROMPT = _FALLBACK_MORNING
 
 
 # ── Output validator ──────────────────────────────────────────────────────────

@@ -20,6 +20,15 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Startup warning when `SE_CAREER_RESUME_PATH` directory is missing.
 
 ### Added
+- `packages/core/src/core/prompts.py`: Versioned YAML prompt loader — loads expert prompts from `prompts/<expert>/v*.yaml` with semver versioning, lru_cache, `get_system_prompt()`/`get_prompt_field()` helpers.
+- `prompts/`: v1.0.0 YAML prompt files for all 5 experts (career, creative, goals, intelligence, spiritual). Enables prompt versioning and A/B testing without code changes.
+- `packages/observability/src/observability/audit.py`: SQLite-backed agent audit trail — records dispatch, tool_call, cache_hit, routing, and error events with input/output hashing. Provides dispatch summary, tool usage, and daily audit reports.
+
+### Changed
+- `agents/intelligence/src/intelligence/subgraph.py`: Load prompts from versioned YAML with inline fallback — `SYSTEM_PROMPT` and `MORNING_PROMPT` now sourced from `prompts/intelligence/v1.0.0.yaml` via `core.prompts` loader.
+- `agents/spiritual/src/spiritual/subgraph.py`: Same YAML prompt loading pattern for `SYSTEM_PROMPT` and `DEVOTIONAL_PROMPT`.
+
+### Added
 - `packages/observability/src/observability/traces.py`: `TraceStore.prune(max_age_days=90)` — deletes traces older than N days, runs VACUUM on bulk deletes. Prevents unbounded `traces.db` growth on Jetson SSD.
 - `packages/memory/src/memory/conversation.py`: `ConversationStore.prune_old_chats(max_age_days=30)` — deletes conversation turns older than N days across all chats.
 - `packages/core/src/core/config.py`: `SE_STORAGE_PRUNE_TRACES_DAYS` (default 90) and `SE_STORAGE_PRUNE_CONVERSATIONS_DAYS` (default 30) settings.
