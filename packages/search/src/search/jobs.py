@@ -11,12 +11,29 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
 _TIMEOUT = 15.0
+
+# Credential query params to redact from error messages
+_SENSITIVE_PARAMS = frozenset({"app_key", "app_id", "api_key", "token", "secret"})
+
+
+def _redact_url(url: str) -> str:
+    """Strip sensitive query params from a URL for safe logging."""
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query, keep_blank_values=True)
+    for key in params:
+        if key.lower() in _SENSITIVE_PARAMS:
+            params[key] = ["***"]
+    redacted_query = urlencode(params, doseq=True)
+    return urlunparse(parsed._replace(query=redacted_query))
+
+
 _MUSE_BASE = "https://www.themuse.com/api/public/jobs"
 _REMOTIVE_BASE = "https://remotive.com/api/remote-jobs"
 _ADZUNA_BASE = "https://api.adzuna.com/v1/api/jobs/us/search/1"
@@ -195,8 +212,12 @@ async def _fetch_adzuna(
                     description_snippet=(job.get("description", "") or "")[:400],
                 )
             )
-    except (httpx.HTTPError, KeyError, ValueError):
-        logger.warning("adzuna_fetch_failed query=%r where=%r", query, where, exc_info=True)
+    except (httpx.HTTPError, KeyError, ValueError) as exc:
+        # Redact credentials from error message — httpx includes the full URL with query params
+        redacted = str(exc)
+        if isinstance(exc, httpx.HTTPStatusError):
+            redacted = f"{exc.response.status_code} for url '{_redact_url(str(exc.request.url))}'"
+        logger.warning("adzuna_fetch_failed query=%r where=%r error=%s", query, where, redacted)
     logger.info("jobs_adzuna_fetched query=%r count=%d", query, len(results))
     return results
 

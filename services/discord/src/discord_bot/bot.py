@@ -79,7 +79,10 @@ class SovereignEdgeDiscordBot(discord.Client):
 
     def _is_owner(self, user: discord.User | discord.Member) -> bool:
         """Return True only for the configured owner user ID."""
-        return str(user.id) == str(self._settings.discord_owner_user_id)
+        try:
+            return int(user.id) == int(self._settings.discord_owner_user_id)
+        except (ValueError, TypeError):
+            return False
 
     # ------------------------------------------------------------------ #
     # Bot lifecycle                                                        #

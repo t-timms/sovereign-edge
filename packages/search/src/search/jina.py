@@ -42,23 +42,25 @@ _search_cache: dict[str, tuple[str, float]] = {}
 # ── Persistent client ──────────────────────────────────────────────────────────
 # Lazy-init because Authorization header depends on runtime settings.
 _client: httpx.AsyncClient | None = None
+_client_lock: asyncio.Lock = asyncio.Lock()
 
 
-def _get_client() -> httpx.AsyncClient:
+async def _get_client() -> httpx.AsyncClient:
     global _client
-    if _client is None:
-        settings = get_settings()
-        headers: dict[str, str] = {
-            "Accept": "text/markdown",
-            "X-Return-Format": "markdown",
-        }
-        if jina_key := settings.jina_api_key.get_secret_value():
-            headers["Authorization"] = f"Bearer {jina_key}"
-        _client = httpx.AsyncClient(
-            timeout=_TIMEOUT,
-            headers=headers,
-            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
-        )
+    async with _client_lock:
+        if _client is None:
+            settings = get_settings()
+            headers: dict[str, str] = {
+                "Accept": "text/markdown",
+                "X-Return-Format": "markdown",
+            }
+            if jina_key := settings.jina_api_key.get_secret_value():
+                headers["Authorization"] = f"Bearer {jina_key}"
+            _client = httpx.AsyncClient(
+                timeout=_TIMEOUT,
+                headers=headers,
+                limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+            )
     return _client
 
 
@@ -96,6 +98,7 @@ def _evict_expired() -> None:
 
 
 # Private IP ranges — SSRF guard for fetch()
+# Covers IPv4 private/loopback/link-local and IPv6 loopback/ULA/link-local
 _PRIVATE_NETS = [
     ipaddress.ip_network("10.0.0.0/8"),
     ipaddress.ip_network("172.16.0.0/12"),
@@ -104,14 +107,25 @@ _PRIVATE_NETS = [
     ipaddress.ip_network("169.254.0.0/16"),
     ipaddress.ip_network("::1/128"),
     ipaddress.ip_network("fc00::/7"),
+    ipaddress.ip_network("fe80::/10"),
 ]
 
 
 _DNS_TIMEOUT = 5.0  # seconds — prevents hung thread on slow/malicious DNS
 
 
+def _resolve_all_addrs(hostname: str) -> list[str]:
+    """Resolve hostname to all IPv4 and IPv6 addresses via getaddrinfo."""
+    results = socket.getaddrinfo(hostname, None)
+    return [addr[4][0] for addr in results]
+
+
 async def _is_private_url(url: str) -> bool:
     """Return True if the URL resolves to a private/loopback address.
+
+    Uses getaddrinfo to resolve ALL addresses (IPv4 + IPv6) and checks
+    every one against the private ranges. A single private address causes
+    rejection (fail closed).
 
     DNS resolution runs in a thread-pool executor so the async event loop
     is never blocked by a slow or hanging DNS query. A 5-second timeout
@@ -123,12 +137,15 @@ async def _is_private_url(url: str) -> bool:
         if not hostname:
             return True
         loop = asyncio.get_running_loop()
-        resolved = await asyncio.wait_for(
-            loop.run_in_executor(None, socket.gethostbyname, hostname),
+        all_addrs = await asyncio.wait_for(
+            loop.run_in_executor(None, _resolve_all_addrs, hostname),
             timeout=_DNS_TIMEOUT,
         )
-        addr = ipaddress.ip_address(resolved)
-        return any(addr in net for net in _PRIVATE_NETS)
+        for raw_addr in all_addrs:
+            addr = ipaddress.ip_address(raw_addr)
+            if any(addr in net for net in _PRIVATE_NETS):
+                return True
+        return False
     except (TimeoutError, OSError, ValueError):
         return True  # Fail closed on any resolution error or timeout
 
@@ -149,7 +166,7 @@ async def search(query: str, max_results: int = 5) -> str:
 
     url = f"{_SEARCH_BASE}/{quote_plus(query)}"
     params = {"num_results": str(max_results)}
-    client = _get_client()
+    client = await _get_client()
 
     for attempt in range(_MAX_RETRIES + 1):
         try:
@@ -192,7 +209,7 @@ async def fetch(url: str) -> str:
         logger.warning("jina_fetch_blocked_ssrf url=%r", url)
         return ""
     reader_url = f"{_READER_BASE}/{url}"
-    client = _get_client()
+    client = await _get_client()
 
     for attempt in range(_MAX_RETRIES + 1):
         try:

@@ -36,15 +36,17 @@ _DEFAULT_QUERY = "cat:cs.AI OR cat:cs.LG OR cat:cs.CL OR cat:cs.CV"
 
 # ── Persistent client ──────────────────────────────────────────────────────────
 _client: httpx.AsyncClient | None = None
+_client_lock: asyncio.Lock = asyncio.Lock()
 
 
-def _get_client() -> httpx.AsyncClient:
+async def _get_client() -> httpx.AsyncClient:
     global _client
-    if _client is None:
-        _client = httpx.AsyncClient(
-            timeout=_TIMEOUT,
-            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
-        )
+    async with _client_lock:
+        if _client is None:
+            _client = httpx.AsyncClient(
+                timeout=_TIMEOUT,
+                limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+            )
     return _client
 
 
@@ -87,7 +89,7 @@ async def fetch_recent(
             "sortOrder": "descending",
         }
     )
-    client = _get_client()
+    client = await _get_client()
     resp_text: str | None = None
 
     for attempt in range(_MAX_RETRIES + 1):

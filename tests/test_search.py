@@ -433,3 +433,58 @@ class TestHFPapers:
         from search.hf import format_hf_papers
 
         assert format_hf_papers([]) == ""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Credential Redaction
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestCredentialRedaction:
+    def test_redact_url_strips_sensitive_params(self) -> None:
+        from search.jobs import _redact_url
+
+        url = (
+            "https://api.adzuna.com/v1/api/jobs/us/search/1"
+            "?app_id=006d03a0&app_key=supersecret&what=ML+engineer"
+        )
+        redacted = _redact_url(url)
+        assert "006d03a0" not in redacted
+        assert "supersecret" not in redacted
+        # urlencode encodes * as %2A
+        assert "app_id=%2A%2A%2A" in redacted
+        assert "app_key=%2A%2A%2A" in redacted
+        assert "what=ML" in redacted
+
+    def test_redact_url_preserves_non_sensitive_params(self) -> None:
+        from search.jobs import _redact_url
+
+        url = "https://example.com/search?query=python&page=1"
+        assert _redact_url(url) == url
+
+    async def test_adzuna_http_error_returns_empty_and_redacts(self) -> None:
+        import httpx
+        from search.jobs import _fetch_adzuna
+
+        # Build a realistic HTTPStatusError with credentials in the URL
+        request = httpx.Request(
+            "GET",
+            "https://api.adzuna.com/v1/api/jobs/us/search/1"
+            "?app_id=006d03a0&app_key=leaked_secret&what=ML",
+        )
+        response = httpx.Response(503, request=request)
+
+        client = MagicMock()
+        client.get = AsyncMock(return_value=MagicMock())
+        client.get.return_value.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "503 Service Unavailable", request=request, response=response
+        )
+
+        result = await _fetch_adzuna(client, "006d03a0", "leaked_secret", "ML", "dallas")
+        assert result == []
+
+    def test_redact_url_handles_no_query_string(self) -> None:
+        from search.jobs import _redact_url
+
+        url = "https://api.adzuna.com/v1/api/jobs"
+        assert _redact_url(url) == url

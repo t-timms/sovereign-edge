@@ -124,6 +124,26 @@ class ConversationStore:
         except sqlite3.Error:
             logger.error("conversation_clear_failed chat_id=%s", chat_id, exc_info=True)
 
+    def prune_old_chats(self, max_age_days: int = 30) -> int:
+        """Delete turns older than *max_age_days* and return the count of deleted rows."""
+        from datetime import timedelta
+
+        cutoff = (datetime.now(UTC) - timedelta(days=max_age_days)).isoformat()
+        try:
+            with self._lock:
+                cursor = self.conn.execute("DELETE FROM turns WHERE ts < ?", (cutoff,))
+                deleted = cursor.rowcount
+                self.conn.commit()
+                logger.info(
+                    "conversation_store_pruned deleted=%d max_age_days=%d",
+                    deleted,
+                    max_age_days,
+                )
+                return deleted
+        except sqlite3.Error:
+            logger.error("conversation_store_prune_failed", exc_info=True)
+            return 0
+
     def close(self) -> None:
         """Close the underlying SQLite connection. Safe to call multiple times."""
         with self._lock:

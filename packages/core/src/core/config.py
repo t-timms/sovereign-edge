@@ -149,6 +149,10 @@ class Settings(BaseSettings):
     # Adds ~1-2 s latency per call. Set SE_REFLECT_ENABLED=true to enable.
     reflect_enabled: bool = False
 
+    # Storage pruning — Jetson SSD longevity
+    storage_prune_traces_days: int = 90
+    storage_prune_conversations_days: int = 30
+
     # Scheduling
     morning_wake_hour: int = 5
     morning_wake_minute: int = 0

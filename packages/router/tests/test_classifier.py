@@ -82,3 +82,16 @@ def test_classify_unknown_defaults_to_general(router: IntentRouter) -> None:
     result = router.classify("xyzzy frobnicator quux")
     assert result.intent == IntentClass.GENERAL
     assert result.confidence < 0.7
+
+
+# ── async PII routing ────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio()
+async def test_pii_text_aroute_forces_local(router: IntentRouter) -> None:
+    """PII in user text must force LOCAL routing regardless of intent."""
+    from core.types import RoutingDecision
+
+    _intent, confidence, routing = await router.aroute("My SSN is 123-45-6789")
+    assert routing == RoutingDecision.LOCAL
+    assert confidence > 0

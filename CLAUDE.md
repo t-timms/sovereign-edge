@@ -184,10 +184,9 @@ The bot has a `fcntl.flock` single-instance guard — starting twice is safe.
 | Priority | Provider | Model | Structured? | Free Limit |
 |----------|---------|-------|-------------|------------|
 | 1 | Groq | llama-4-scout-17b | No | 500K TPD |
-| 2 | Gemini | gemini-2.5-flash | Yes | 250K TPD |
-| 3 | Cerebras | llama3.3-70b | No | 1M TPD (disabled — 404) |
-| 4 | Mistral | mistral-small-latest | No | 33M TPD |
-| 5 | Ollama | qwen3:0.6b | No | Unlimited (local) |
+| 2 | Gemini | gemini-2.5-flash | Yes (thinking model) | 250K TPD |
+| 3 | Mistral | mistral-small-latest | No | 33M TPD |
+| 4 | Ollama | qwen3:0.6b | No | Unlimited (local) |
 
 Structured output (instructor + Pydantic) is Gemini-only. All others return unstructured text.
 PII detection forces routing to Ollama only — no data leaves the device.
@@ -199,7 +198,7 @@ PII detection forces routing to Ollama only — no data leaves the device.
 | Issue | Status |
 |-------|--------|
 | LiteLLM `1.82.7/1.82.8` supply chain attack | Fixed — upgraded to `>=1.83.0` |
-| Cerebras always 404 | Disabled in provider chain — `supports_structured=False` acts as skip |
+| Cerebras always 404 | Removed from provider chain entirely (2025-12). Re-add when stable. |
 | flashrank `ms-marco-MiniLM-L-4-v2` removed from HuggingFace | Fixed — switched to `ms-marco-TinyBERT-L-2-v2` |
 | mem0 optional dependency | `uv add "sovereign-edge-memory[episodic]"` to enable — conflicts with openai v2 in older mem0 versions |
 | ONNX router model | `data/models/router.onnx` required — falls back to keyword matching if absent |

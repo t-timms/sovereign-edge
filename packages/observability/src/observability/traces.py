@@ -157,6 +157,27 @@ class TraceStore:
 
         return [dict(r) for r in rows]
 
+    def prune(self, max_age_days: int = 90) -> int:
+        """Delete traces older than *max_age_days* and return the count of deleted rows.
+
+        Runs VACUUM if more than 1000 rows are deleted to reclaim SSD space.
+        """
+        from datetime import timedelta
+
+        cutoff = (datetime.now(UTC) - timedelta(days=max_age_days)).isoformat()
+        try:
+            with self._lock:
+                cursor = self.conn.execute("DELETE FROM traces WHERE timestamp < ?", (cutoff,))
+                deleted = cursor.rowcount
+                self.conn.commit()
+                if deleted > 1000:
+                    self.conn.execute("VACUUM")
+                logger.info("trace_store_pruned deleted=%d max_age_days=%d", deleted, max_age_days)
+                return deleted
+        except sqlite3.Error:
+            logger.error("trace_store_prune_failed", exc_info=True)
+            return 0
+
     def close(self) -> None:
         """Close the underlying SQLite connection. Safe to call multiple times."""
         with self._lock:

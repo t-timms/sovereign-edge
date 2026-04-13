@@ -1,7 +1,7 @@
 """
 Multi-provider LLM gateway using LiteLLM as a library (NOT proxy).
 
-Fallback chain for complex/technical queries: Groq → Gemini → Cerebras → Mistral → Local
+Fallback chain for complex/technical queries: Groq → Gemini → Mistral → Local
 Simple conversational queries (<250 chars, no technical keywords): Mistral is tried
   second (after Groq) to preserve Groq/Gemini quota for complex work.
 Per-provider token-bucket RPM rate limiting with persistent state.
@@ -98,19 +98,12 @@ def _build_providers(s: Settings) -> list[ProviderConfig]:
             env_key="GOOGLE_API_KEY",
             is_thinking_model=True,  # 2.5 Flash uses ~75% of tokens on reasoning
         ),
-        ProviderConfig(
-            model="cerebras/llama3.3-70b",
-            rpm=s.cerebras_rpm,
-            tpd=1_000_000,
-            priority=3,
-            env_key="CEREBRAS_API_KEY",
-            supports_structured=False,  # Model consistently 404 — disabled until Cerebras updates
-        ),
+        # Cerebras removed — consistently 404 since 2025-12. Re-add when stable.
         ProviderConfig(
             model="mistral/mistral-small-latest",
             rpm=s.mistral_rpm,
             tpd=33_000_000,
-            priority=4,
+            priority=3,
             env_key="MISTRAL_API_KEY",
             supports_structured=False,  # Returns free-text instead of tool calls
         ),

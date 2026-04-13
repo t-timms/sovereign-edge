@@ -19,7 +19,25 @@ Versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `pypdf>=4.0,<5.0` added to `sovereign-edge-search` dependencies for resume parsing.
 - Startup warning when `SE_CAREER_RESUME_PATH` directory is missing.
 
+### Added
+- `packages/observability/src/observability/traces.py`: `TraceStore.prune(max_age_days=90)` — deletes traces older than N days, runs VACUUM on bulk deletes. Prevents unbounded `traces.db` growth on Jetson SSD.
+- `packages/memory/src/memory/conversation.py`: `ConversationStore.prune_old_chats(max_age_days=30)` — deletes conversation turns older than N days across all chats.
+- `packages/core/src/core/config.py`: `SE_STORAGE_PRUNE_TRACES_DAYS` (default 90) and `SE_STORAGE_PRUNE_CONVERSATIONS_DAYS` (default 30) settings.
+- `agents/orchestrator/src/orchestrator/main.py`: Daily 04:00 CT cron job runs both prune methods automatically.
+
+### Security
+- `packages/search/src/search/jobs.py`: Redact API credentials from httpx error log output — Adzuna `app_id` and `app_key` were included in `HTTPStatusError` exception messages logged via `exc_info=True`. Added `_redact_url()` helper that strips sensitive query params before logging. Prevents credential leakage to journalctl.
+- `services/whatsapp/src/whatsapp/bot.py`: Add input length validation (2000-char cap) to WhatsApp handler — Telegram and Discord both enforced `_MAX_INPUT_CHARS` but WhatsApp had no length check, allowing unbounded input to reach the LLM gateway.
+- `services/telegram/src/telegram_bot/bot.py` + `services/discord/src/discord_bot/bot.py`: Use `int()` comparison for chat/user ID auth instead of `str()` — prevents type-confusion bypasses. Wraps in `try/except (ValueError, TypeError)` to reject malformed IDs.
+- `.github/workflows/ci.yml`: Remove `continue-on-error: true` from type-check job — type errors now block merge.
+- `packages/search/src/search/jina.py`: SSRF check now covers IPv6 — replaced `socket.gethostbyname()` with `socket.getaddrinfo()`, added `fe80::/10` (link-local) to private network list.
+
 ### Fixed
+- `packages/search/src/search/jina.py` + `packages/search/src/search/arxiv.py`: Thread-safe HTTP client initialization — added `asyncio.Lock` to `_get_client()` to prevent race condition on first access from concurrent coroutines.
+- `agents/orchestrator/src/orchestrator/main.py`: Close SQLite connections (traces, conversations, audit) on orchestrator shutdown — prevents file descriptor leaks.
+
+### Removed
+- `packages/llm/src/llm/gateway.py`: Cerebras provider removed from fallback chain — consistently 404 since 2025-12. Mistral priority adjusted from 4 to 3.
 - `packages/llm/src/llm/gateway.py`: Thinking model token budget — Gemini 2.5 Flash spends ~75% of `max_tokens` on reasoning, leaving too few for actual JSON output (structured calls returned `'{\n  '` and hit `IncompleteOutputException`). Added `is_thinking_model` flag to `ProviderConfig`; gateway now multiplies requested `max_tokens` by 4x for thinking models across `_call_with_retry()`, `stream_complete()`, and `_call_structured_with_retry()`. Timeout bumped from 30s to 60s for structured thinking calls.
 - `packages/llm/src/llm/gateway.py`: Per-provider `max_output_tokens` cap — Groq rejects `max_tokens > 8192` with `BadRequestError`. Gateway now clamps `max_tokens` to `min(requested, provider.max_output_tokens)` in `_call_with_retry()`, `stream_complete()`, and `_call_structured_with_retry()`. Groq capped at 8192; others default to 32768.
 - `agents/career/src/career/subgraph.py`: Unstructured fallback now detects JSON wrapped in code fences (Mistral returns ````json {...}``` `` instead of natural language) and salvages it into `JobListingResponse` structured format. Falls through to raw text if JSON parsing fails.

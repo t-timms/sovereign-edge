@@ -76,7 +76,11 @@ def _auth(func: Callable[..., Any]) -> Callable[..., Any]:
     ) -> None:
         if update.effective_user is None or update.effective_chat is None:
             return
-        if str(update.effective_chat.id) != str(self._settings.telegram_owner_chat_id):
+        try:
+            is_owner = int(update.effective_chat.id) == int(self._settings.telegram_owner_chat_id)
+        except (ValueError, TypeError):
+            is_owner = False
+        if not is_owner:
             # Guard: message may be None for callback queries / channel posts
             if update.message is not None:
                 await update.message.reply_text("⛔ Unauthorised.")

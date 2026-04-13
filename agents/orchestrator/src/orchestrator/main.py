@@ -150,6 +150,18 @@ class Orchestrator:
                         cached=True,
                     )
                     self._trace_store.record(result)
+                    try:
+                        from observability.audit import AuditEventType, get_audit_store
+
+                        get_audit_store().record(
+                            event_type=AuditEventType.CACHE_HIT,
+                            expert=str(request.expert),
+                            task_id=str(request.task_id),
+                            input_text=request.content,
+                            routing=str(request.routing),
+                        )
+                    except Exception:
+                        logger.debug("audit_cache_hit_failed", exc_info=True)
                     if chat_id:
                         from memory.conversation import get_conversation_store
 
@@ -259,6 +271,28 @@ class Orchestrator:
         # TraceStore.record() has internal try/except — observability failures
         # must never crash the dispatch path.
         self._trace_store.record(result)
+
+        # ── 7. Audit trail — granular event log for compliance/debugging ──
+        try:
+            from observability.audit import AuditEventType, get_audit_store
+
+            get_audit_store().record(
+                event_type=AuditEventType.DISPATCH,
+                expert=str(result.expert),
+                task_id=str(result.task_id),
+                model=result.model_used,
+                input_text=request.content,
+                output_text=result.content,
+                tokens_in=result.tokens_in,
+                tokens_out=result.tokens_out,
+                latency_ms=result.latency_ms,
+                cost_usd=result.cost_usd,
+                routing=str(request.routing),
+                metadata={"intent": request.intent.value, "cached": str(result.cached)},
+            )
+        except Exception:
+            logger.debug("audit_record_failed", exc_info=True)
+
         return result
 
     async def stream_dispatch(self, request: TaskRequest) -> AsyncGenerator[str, None]:
@@ -506,6 +540,16 @@ class Orchestrator:
                 for chunk in _split_message(message, 4000):
                     await self._send_fn(chunk)
                 logger.info("brief_sent expert=%s", expert_name)
+                try:
+                    from observability.audit import AuditEventType, get_audit_store
+
+                    get_audit_store().record(
+                        event_type=AuditEventType.MORNING_BRIEF,
+                        expert=expert_name,
+                        output_text=brief,
+                    )
+                except Exception:
+                    logger.debug("audit_morning_brief_failed", exc_info=True)
             except Exception:
                 logger.error("brief_send_failed expert=%s", expert_name, exc_info=True)
         else:
@@ -546,6 +590,27 @@ class Orchestrator:
         """18:00 — evening job scan."""
         await self._send_brief("career", "💼", "Evening Job Scan")
 
+    async def _prune_storage(self) -> None:
+        """04:00 — delete old traces and conversation turns to extend Jetson SSD life."""
+        traces_deleted = self._trace_store.prune(
+            max_age_days=self._settings.storage_prune_traces_days
+        )
+        try:
+            from memory.conversation import get_conversation_store
+
+            convos_deleted = get_conversation_store().prune_old_chats(
+                max_age_days=self._settings.storage_prune_conversations_days
+            )
+        except Exception:
+            logger.error("prune_conversations_failed", exc_info=True)
+            convos_deleted = 0
+
+        logger.info(
+            "storage_pruned traces_deleted=%d conversations_deleted=%d",
+            traces_deleted,
+            convos_deleted,
+        )
+
     # ------------------------------------------------------------------ #
     # Scheduler setup                                                      #
     # ------------------------------------------------------------------ #
@@ -567,7 +632,9 @@ class Orchestrator:
         h150, m150 = _offset(150)
 
         # Career rescan is absolute 18:00 (regardless of wake hour)
+        # Storage prune is absolute 04:00 — runs before morning briefs
         jobs: list[tuple[Any, int, int]] = [
+            (self._prune_storage, 4, 0),
             (self._morning_health_check, h0, m0),
             (self._spiritual_brief, h15, m15),
             (self._intelligence_brief, h30, m30),
@@ -639,6 +706,28 @@ class Orchestrator:
             logger.info("http_clients_closed")
         except ImportError:
             logger.debug("search_modules_not_available — skip aclose")
+
+        # Close SQLite connections for clean shutdown
+        try:
+            self._trace_store.close()
+            logger.info("trace_store_closed")
+        except Exception:
+            logger.debug("trace_store_close_failed", exc_info=True)
+        try:
+            from observability.audit import get_audit_store
+
+            get_audit_store().close()
+            logger.info("audit_store_closed")
+        except Exception:
+            logger.debug("audit_store_close_failed", exc_info=True)
+        try:
+            from memory.conversation import get_conversation_store
+
+            get_conversation_store().close()
+            logger.info("conversation_store_closed")
+        except Exception:
+            logger.debug("conversation_store_close_failed", exc_info=True)
+
         self._running = False
         logger.info("orchestrator_stopped")
 

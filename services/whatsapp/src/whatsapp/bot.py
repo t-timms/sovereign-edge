@@ -217,10 +217,14 @@ async def webhook(
             detail="Unauthorised sender",
         )
 
-    # ── 3. Empty body guard ─────────────────────────────────────────────────
+    # ── 3. Empty body + length guard ─────────────────────────────────────────
+    _MAX_INPUT_CHARS = 2000
     text = Body.strip()
     if not text:
         return {"status": "ok"}
+    if len(text) > _MAX_INPUT_CHARS:
+        logger.info("input_truncated sender=%s original_len=%d", sender, len(text))
+        text = text[:_MAX_INPUT_CHARS]
 
     # ── 4. Dispatch through orchestrator ────────────────────────────────────
     try:
