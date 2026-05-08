@@ -1,6 +1,6 @@
 [Unit]
 Description=Sovereign Edge Voice Assistant
-Documentation=https://github.com/omnipotence-eth/sovereign-edge
+Documentation=https://github.com/t-timms/sovereign-edge
 After=sovereign-edge-telegram.service
 Wants=network-online.target
 PartOf=ai-stack.target

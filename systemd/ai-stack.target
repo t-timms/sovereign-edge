@@ -1,6 +1,6 @@
 [Unit]
 Description=Sovereign Edge AI Stack
-Documentation=https://github.com/omnipotence-eth/sovereign-edge
+Documentation=https://github.com/t-timms/sovereign-edge
 After=network-online.target ollama.service
 Wants=network-online.target ollama.service voice.service
 

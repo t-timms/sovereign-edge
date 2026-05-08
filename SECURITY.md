@@ -24,7 +24,7 @@ Sovereign Edge is a **single-user, single-owner system** — not a multi-tenant 
 
 ## Reporting a Vulnerability
 
-Use [GitHub private security advisories](https://github.com/omnipotence-eth/sovereign-edge/security/advisories/new) to report vulnerabilities privately.
+Use [GitHub private security advisories](https://github.com/t-timms/sovereign-edge/security/advisories/new) to report vulnerabilities privately.
 
 Please include:
 - A description of the vulnerability and its potential impact

@@ -29,7 +29,7 @@ Sovereign Edge is a personal AI system built for single-user deployment. Contrib
 ## 2. Development Setup
 
 ```bash
-git clone https://github.com/omnipotence-eth/sovereign-edge.git
+git clone https://github.com/t-timms/sovereign-edge.git
 cd sovereign-edge
 
 # Install all workspace packages in editable mode

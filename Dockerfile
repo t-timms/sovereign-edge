@@ -53,7 +53,7 @@ FROM python:3.13.2-slim AS runtime
 
 LABEL org.opencontainers.image.title="sovereign-edge" \
       org.opencontainers.image.version="0.3.1" \
-      org.opencontainers.image.source="https://github.com/omnipotence-eth/sovereign-edge"
+      org.opencontainers.image.source="https://github.com/t-timms/sovereign-edge"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \

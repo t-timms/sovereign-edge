@@ -51,7 +51,7 @@ ollama pull qwen3-embedding:0.6b
 
 ```bash
 # Replace placeholders with your Linux username and repo path
-git clone https://github.com/omnipotence-eth/sovereign-edge.git ~/sovereign-edge
+git clone https://github.com/t-timms/sovereign-edge.git ~/sovereign-edge
 cd ~/sovereign-edge
 ```
 

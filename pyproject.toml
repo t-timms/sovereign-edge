@@ -4,7 +4,7 @@ version = "0.4.0"
 description = "Sovereign Edge Personal Intelligence System"
 requires-python = ">=3.11"
 license = {text = "MIT"}
-authors = [{name = "Tremayne Timms", email = "omnipotence-eth@users.noreply.github.com"}]
+authors = [{name = "Tremayne Timms", email = "t-timms@users.noreply.github.com"}]
 
 [tool.uv.workspace]
 members = [

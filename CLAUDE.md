@@ -95,7 +95,7 @@ sovereign-edge/
 ```bash
 # Prerequisites: Python 3.11+, uv, Ollama running
 
-git clone https://github.com/omnipotence-eth/sovereign-edge.git
+git clone https://github.com/t-timms/sovereign-edge.git
 cd sovereign-edge
 uv sync --all-packages
 

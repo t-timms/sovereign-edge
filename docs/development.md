@@ -15,7 +15,7 @@ Local setup, code quality tooling, testing, and contribution guidelines.
 ### Install
 
 ```bash
-git clone https://github.com/omnipotence-eth/sovereign-edge.git
+git clone https://github.com/t-timms/sovereign-edge.git
 cd sovereign-edge
 uv sync --all-packages
 ```
